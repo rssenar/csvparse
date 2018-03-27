@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strings"
 )
 
 type Record struct {
@@ -62,9 +63,9 @@ func (p *Parser) UnMarshalCSV() (Records []Record, err error) {
 			p.header["mi"] = i
 		case regexp.MustCompile(`(?i)^[Ll]ast[Nn]ame|^[Ll]ast [Nn]ame$`).MatchString(v):
 			p.header["lastname"] = i
-		case regexp.MustCompile(`(?i)^[Aa]ddress1?$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^[Aa]ddress1?$^|[Aa]ddress[ _]1?$`).MatchString(v):
 			p.header["address1"] = i
-		case regexp.MustCompile(`(?i)^[Aa]ddress2$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^[Aa]ddress2$|^[Aa]ddress 2$`).MatchString(v):
 			p.header["address2"] = i
 		case regexp.MustCompile(`(?i)^[Cc]ity$`).MatchString(v):
 			p.header["city"] = i
@@ -107,7 +108,7 @@ func (p *Parser) UnMarshalCSV() (Records []Record, err error) {
 	reqFields := []string{"firstname", "lastname", "address1", "city", "state", "zip"}
 	for _, v := range reqFields {
 		if _, ok := p.header[v]; ok != true {
-			return nil, fmt.Errorf("%v : Missing required column", v)
+			return nil, fmt.Errorf("%v : Missing required fields [firstname, lastname, address1, city, state, zip]", v)
 		}
 	}
 
@@ -116,21 +117,21 @@ func (p *Parser) UnMarshalCSV() (Records []Record, err error) {
 		for hdr := range p.header {
 			switch hdr {
 			case "fullname":
-				r.Fullname = rec[p.header[hdr]]
+				r.Fullname = lCase(rec[p.header[hdr]])
 			case "firstname":
-				r.Firstname = rec[p.header[hdr]]
+				r.Firstname = lCase(rec[p.header[hdr]])
 			case "mi":
-				r.MI = rec[p.header[hdr]]
+				r.MI = uCase(rec[p.header[hdr]])
 			case "lastname":
-				r.Lastname = rec[p.header[hdr]]
+				r.Lastname = lCase(rec[p.header[hdr]])
 			case "address1":
-				r.Address1 = rec[p.header[hdr]]
+				r.Address1 = lCase(rec[p.header[hdr]])
 			case "address2":
-				r.Address2 = rec[p.header[hdr]]
+				r.Address2 = lCase(rec[p.header[hdr]])
 			case "city":
-				r.City = rec[p.header[hdr]]
+				r.City = lCase(rec[p.header[hdr]])
 			case "state":
-				r.State = rec[p.header[hdr]]
+				r.State = lCase(rec[p.header[hdr]])
 			case "zip":
 				r.Zip = rec[p.header[hdr]]
 			case "zip4":
@@ -142,21 +143,21 @@ func (p *Parser) UnMarshalCSV() (Records []Record, err error) {
 			case "cph":
 				r.CPH = rec[p.header[hdr]]
 			case "email":
-				r.Email = rec[p.header[hdr]]
+				r.Email = lCase(rec[p.header[hdr]])
 			case "vin":
-				r.VIN = rec[p.header[hdr]]
+				r.VIN = uCase(rec[p.header[hdr]])
 			case "year":
 				r.Year = rec[p.header[hdr]]
 			case "make":
-				r.Make = rec[p.header[hdr]]
+				r.Make = lCase(rec[p.header[hdr]])
 			case "model":
-				r.Model = rec[p.header[hdr]]
+				r.Model = lCase(rec[p.header[hdr]])
 			case "deldate":
 				r.DelDate = rec[p.header[hdr]]
 			case "date":
 				r.Date = rec[p.header[hdr]]
 			case "dsfwalkseq":
-				r.DSFwalkseq = rec[p.header[hdr]]
+				r.DSFwalkseq = uCase(rec[p.header[hdr]])
 			case "crrt":
 				r.CRRT = rec[p.header[hdr]]
 			case "kbb":
@@ -165,41 +166,53 @@ func (p *Parser) UnMarshalCSV() (Records []Record, err error) {
 		}
 		Records = append(Records, r)
 	}
+
+	// for _, row := range rows[:][1:] {
+	// 	w := csv.NewWriter(os.Stdout)
+	// 	if err := w.Write(row); err != nil {
+	// 		return fmt.Errorf("%v : error writing record to csv", err)
+	// 	}
+	// 	// Write any buffered data to the underlying writer (standard output).
+	// 	w.Flush()
+
+	// 	if err := w.Error(); err != nil {
+	// 		return fmt.Errorf("%v : error writing to stdout", err)
+	// 	}
+	// }
+
+	// for a, b := range rows[:][0] {
+	// 	fmt.Println(a, b)
+	// }
+
+	// type kv struct {
+	// 	Key   string
+	// 	Value int
+	// }
+
+	// var ss []kv
+	// for k, v := range p.header {
+	// 	ss = append(ss, kv{k, v})
+	// }
+
+	// sort.Slice(ss, func(i, j int) bool {
+	// 	return ss[i].Value < ss[j].Value
+	// })
+
+	// for _, str := range ss {
+	// 	fmt.Printf("%s, %d\n", str.Key, str.Value)
+	// }
+	// fmt.Printf("%v", x)
 	return
 }
 
-// for _, row := range rows[:][1:] {
-// 	w := csv.NewWriter(os.Stdout)
-// 	if err := w.Write(row); err != nil {
-// 		return fmt.Errorf("%v : error writing record to csv", err)
-// 	}
-// 	// Write any buffered data to the underlying writer (standard output).
-// 	w.Flush()
+func tCase(f string) string {
+	return strings.TrimSpace(strings.Title(strings.ToLower(f)))
+}
 
-// 	if err := w.Error(); err != nil {
-// 		return fmt.Errorf("%v : error writing to stdout", err)
-// 	}
-// }
+func uCase(f string) string {
+	return strings.TrimSpace(strings.ToUpper(f))
+}
 
-// for a, b := range rows[:][0] {
-// 	fmt.Println(a, b)
-// }
-
-// type kv struct {
-// 	Key   string
-// 	Value int
-// }
-
-// var ss []kv
-// for k, v := range p.header {
-// 	ss = append(ss, kv{k, v})
-// }
-
-// sort.Slice(ss, func(i, j int) bool {
-// 	return ss[i].Value < ss[j].Value
-// })
-
-// for _, str := range ss {
-// 	fmt.Printf("%s, %d\n", str.Key, str.Value)
-// }
-// fmt.Printf("%v", x)
+func lCase(f string) string {
+	return strings.TrimSpace(strings.ToLower(f))
+}
