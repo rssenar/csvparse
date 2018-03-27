@@ -42,11 +42,11 @@ type Record struct {
 // Parser holds the header field map and reader
 type Parser struct {
 	header map[string]int
-	file   io.ReadCloser
+	file   io.Reader
 }
 
 // New initializes a new parser
-func New(input io.ReadCloser) *Parser {
+func New(input io.Reader) *Parser {
 	return &Parser{
 		header: map[string]int{},
 		file:   input,

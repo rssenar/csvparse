@@ -1,6 +1,7 @@
 package csvparse_test
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -129,10 +130,10 @@ func Test_ParseDate(t *testing.T) {
 		input    string
 		expected time.Time
 	}{
-		{"12/31/2003", extDate("12/31/2003")},
-		{"12-31-2003", extDate("12-31-2003")},
-		{"1-3-03", extDate("1-3-03")},
-		{"", extDate("")},
+		{"12/31/2003", expDate("12/31/2003")},
+		{"12-31-2003", expDate("12-31-2003")},
+		{"1-3-03", expDate("1-3-03")},
+		{"", expDate("")},
 	}
 	for _, c := range cases {
 		out := cp.ParseDate(c.input)
@@ -142,7 +143,7 @@ func Test_ParseDate(t *testing.T) {
 	}
 }
 
-func extDate(date string) time.Time {
+func expDate(date string) time.Time {
 	formats := []string{"1/2/2006", "1-2-2006", "1/2/06", "1-2-06", "2006/1/2", "2006-1-2", time.RFC3339}
 	for _, f := range formats {
 		if date, err := time.Parse(f, date); err == nil {
@@ -150,4 +151,38 @@ func extDate(date string) time.Time {
 		}
 	}
 	return time.Time{}
+}
+
+func Test_UnMarshalCSV(t *testing.T) {
+	file := `PURL,First Name,Last Name,Position,Address,City,State,Zip,PIN Code,4Zip,Crrt,DSF_WALK_SEQ
+Website: 733win.com/BuckUlmer,Buck,Ulmer,PURCHASE,5702 Arbor Valley Dr,Arlington,TX,76016,50004,1519,R001,366`
+	rdr := strings.NewReader(file)
+	p := cp.New(rdr)
+	parser, err := p.UnMarshalCSV()
+	if err != nil {
+		t.Error(err)
+	}
+	for _, r := range parser {
+		if r.Firstname != "Buck" {
+			t.Errorf("Expected %v, got %v", "Buck", r.Firstname)
+		}
+		if r.Lastname != "Ulmer" {
+			t.Errorf("Expected %v, got %v", "Ulmer", r.Lastname)
+		}
+		if r.Address1 != "5702 Arbor Valley Dr" {
+			t.Errorf("Expected %v, got %v", "5702 Arbor Valley Dr", r.Address1)
+		}
+		if r.Address2 != "" {
+			t.Errorf("Expected %v, got %v", "", r.Address2)
+		}
+		if r.City != "Arlington" {
+			t.Errorf("Expected %v, got %v", "Arlington", r.City)
+		}
+		if r.State != "TX" {
+			t.Errorf("Expected %v, got %v", "TX", r.State)
+		}
+		if r.Zip != "76016" {
+			t.Errorf("Expected %v, got %v", "76016", r.Zip)
+		}
+	}
 }

@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	var input io.ReadCloser
+	var input io.Reader
 	if len(os.Args[1:]) != 0 {
 		if len(os.Args[1:]) > 1 {
 			log.Fatalln("err: Cannot parse multiple files")
