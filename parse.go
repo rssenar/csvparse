@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// Record represents a customer
 type Record struct {
 	Fullname   string `json:"full_name"`
 	Firstname  string `json:"first_name"`
@@ -28,17 +29,19 @@ type Record struct {
 	Make       string `json:"make"`
 	Model      string `json:"model"`
 	DelDate    string `json:"delivery_date"`
-	Date       string `json:"date"`
+	Date       string `json:"last_service_date"`
 	DSFwalkseq string `json:"DSF_Walk_Sequence"`
 	CRRT       string `json:"CRRT"`
 	KBB        string `json:"KBB"`
 }
 
+// Parser holds the header field map and reader
 type Parser struct {
 	header map[string]int
 	file   io.ReadCloser
 }
 
+// New initializes a new parser
 func New(input io.ReadCloser) *Parser {
 	return &Parser{
 		header: map[string]int{},
@@ -46,9 +49,9 @@ func New(input io.ReadCloser) *Parser {
 	}
 }
 
-func (p *Parser) UnMarshalCSV() ([]Record, error) {
-
-	var records []Record
+// UnMarshalCSV unmarshalls CSV file to record struct
+func (p *Parser) UnMarshalCSV() ([]*Record, error) {
+	records := []*Record{}
 	rdr := csv.NewReader(p.file)
 
 	for i := 0; ; i++ {
@@ -59,20 +62,27 @@ func (p *Parser) UnMarshalCSV() ([]Record, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%v : unable to parse file, csv format required", err)
 		}
+		hdrmp := make(map[string]int)
 		if i == 0 {
 			for i, v := range row {
+				v = lCase(v)
+				if _, ok := hdrmp[v]; ok == true {
+					return nil, fmt.Errorf("%v : Duplicate header field", v)
+				}
+				hdrmp[v]++
+
 				switch {
 				case regexp.MustCompile(`(?i)^[Ff]ull[Nn]ame$`).MatchString(v):
 					p.header["fullname"] = i
-				case regexp.MustCompile(`(?i)^[Ff]irst[Nn]ame|^[Ff]irst [Nn]ame$`).MatchString(v):
+				case regexp.MustCompile(`(?i)^[Ff]irst[Nn]ame$|^[Ff]irst [Nn]ame$`).MatchString(v):
 					p.header["firstname"] = i
 				case regexp.MustCompile(`(?i)^mi$`).MatchString(v):
 					p.header["mi"] = i
-				case regexp.MustCompile(`(?i)^[Ll]ast[Nn]ame|^[Ll]ast [Nn]ame$`).MatchString(v):
+				case regexp.MustCompile(`(?i)^[Ll]ast[Nn]ame$|^[Ll]ast [Nn]ame$`).MatchString(v):
 					p.header["lastname"] = i
-				case regexp.MustCompile(`(?i)^[Aa]ddress1?$^|[Aa]ddress[ _-]1?$`).MatchString(v):
+				case regexp.MustCompile(`(?i)^[Aa]ddress1?$|^[Aa]ddress[ _-]1?$`).MatchString(v):
 					p.header["address1"] = i
-				case regexp.MustCompile(`(?i)^[Aa]ddress2$|^[Aa]ddress 2$`).MatchString(v):
+				case regexp.MustCompile(`(?i)^[Aa]ddress2$|^[Aa]ddress[ _-]2$`).MatchString(v):
 					p.header["address2"] = i
 				case regexp.MustCompile(`(?i)^[Cc]ity$`).MatchString(v):
 					p.header["city"] = i
@@ -112,7 +122,24 @@ func (p *Parser) UnMarshalCSV() ([]Record, error) {
 			}
 		}
 
-		var r Record
+		// Check that all required fields are present
+		reqFields := []string{"firstname", "lastname", "address1", "city", "state", "zip"}
+		for _, v := range reqFields {
+			if _, ok := p.header[v]; ok != true {
+				return nil, fmt.Errorf("%v : Missing required header fields [firstname, lastname, address1, city, state, zip]", v)
+			}
+		}
+
+		// initialize new record instance
+		r := &Record{}
+
+		// parse Zip code field into Zip & Zip4
+		zip, zip4 := parseZip(row[p.header["zip"]])
+		r.Zip = zip
+		if zip4 != "" {
+			r.Zip4 = zip4
+		}
+
 		for header := range p.header {
 			switch header {
 			case "fullname":
@@ -131,16 +158,12 @@ func (p *Parser) UnMarshalCSV() ([]Record, error) {
 				r.City = tCase(row[p.header[header]])
 			case "state":
 				r.State = uCase(row[p.header[header]])
-			case "zip":
-				r.Zip = row[p.header[header]]
-			case "zip4":
-				r.Zip4 = row[p.header[header]]
 			case "hph":
-				r.HPH = row[p.header[header]]
+				r.HPH = formatPhone(row[p.header[header]])
 			case "bph":
-				r.BPH = row[p.header[header]]
+				r.BPH = formatPhone(row[p.header[header]])
 			case "cph":
-				r.CPH = row[p.header[header]]
+				r.CPH = formatPhone(row[p.header[header]])
 			case "email":
 				r.Email = lCase(row[p.header[header]])
 			case "vin":
@@ -156,24 +179,15 @@ func (p *Parser) UnMarshalCSV() ([]Record, error) {
 			case "date":
 				r.Date = row[p.header[header]]
 			case "dsfwalkseq":
-				r.DSFwalkseq = uCase(row[p.header[header]])
+				r.DSFwalkseq = stripSep(row[p.header[header]])
 			case "crrt":
 				r.CRRT = row[p.header[header]]
 			case "kbb":
-				r.KBB = row[p.header[header]]
+				r.KBB = stripSep(row[p.header[header]])
 			}
 		}
 		records = append(records, r)
 	}
-
-	// Check header for required fields
-	reqFields := []string{"firstname", "lastname", "address1", "city", "state", "zip"}
-	for _, v := range reqFields {
-		if _, ok := p.header[v]; ok != true {
-			return nil, fmt.Errorf("%v : Missing required header fields [firstname, lastname, address1, city, state, zip]", v)
-		}
-	}
-
 	return records, nil
 }
 
@@ -187,4 +201,45 @@ func uCase(f string) string {
 
 func lCase(f string) string {
 	return strings.TrimSpace(strings.ToLower(f))
+}
+
+func parseZip(zip string) (string, string) {
+	switch {
+	case regexp.MustCompile(`^[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$`).MatchString(zip):
+		return trimZeros(zip[:5]), trimZeros(zip[5:])
+	case regexp.MustCompile(`^[0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]$`).MatchString(zip):
+		zsplit := strings.Split(zip, "-")
+		return trimZeros(zsplit[0]), trimZeros(zsplit[1])
+	case regexp.MustCompile(`^[0-9][0-9][0-9][0-9][0-9] [0-9][0-9][0-9][0-9]$`).MatchString(zip):
+		zsplit := strings.Split(zip, " ")
+		return trimZeros(zsplit[0]), trimZeros(zsplit[1])
+	default:
+		return zip, ""
+	}
+}
+
+func trimZeros(s string) string {
+	for i := 0; i < len(s); i++ {
+		s = strings.TrimPrefix(s, "0")
+	}
+	return s
+}
+
+func formatPhone(p string) string {
+	p = stripSep(p)
+	switch len(p) {
+	case 10:
+		return fmt.Sprintf("(%v) %v-%v", p[0:3], p[3:6], p[6:10])
+	case 7:
+		return fmt.Sprintf("%v-%v", p[0:3], p[3:7])
+	default:
+		return ""
+	}
+}
+func stripSep(p string) string {
+	sep := []string{"'", "#", "%", "$", "-", ".", "*", "(", ")", ":", ";", "{", "}", "|", " "}
+	for _, v := range sep {
+		p = strings.Replace(p, v, "", -1)
+	}
+	return p
 }
