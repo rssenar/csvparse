@@ -6,33 +6,37 @@ import (
 	"io"
 	"regexp"
 	"strings"
+	"time"
+
+	"github.com/blendlabs/go-name-parser"
 )
 
 // Record represents a customer
 type Record struct {
-	Fullname   string `json:"full_name"`
-	Firstname  string `json:"first_name"`
-	MI         string `json:"middle_name"`
-	Lastname   string `json:"last_name"`
-	Address1   string `json:"address_1"`
-	Address2   string `json:"address_2"`
-	City       string `json:"city"`
-	State      string `json:"state"`
-	Zip        string `json:"zip"`
-	Zip4       string `json:"zip_4"`
-	HPH        string `json:"home_phone"`
-	BPH        string `json:"business_phone"`
-	CPH        string `json:"mobile_phone"`
-	Email      string `json:"email"`
-	VIN        string `json:"VIN"`
-	Year       string `json:"year"`
-	Make       string `json:"make"`
-	Model      string `json:"model"`
-	DelDate    string `json:"delivery_date"`
-	Date       string `json:"last_service_date"`
-	DSFwalkseq string `json:"DSF_Walk_Sequence"`
-	CRRT       string `json:"CRRT"`
-	KBB        string `json:"KBB"`
+	PKey       int       `json:"Primary_Key"`
+	Fullname   string    `json:"full_name"`
+	Firstname  string    `json:"first_name"`
+	MI         string    `json:"middle_name"`
+	Lastname   string    `json:"last_name"`
+	Address1   string    `json:"address_1"`
+	Address2   string    `json:"address_2"`
+	City       string    `json:"city"`
+	State      string    `json:"state"`
+	Zip        string    `json:"zip"`
+	Zip4       string    `json:"zip_4"`
+	HPH        string    `json:"home_phone"`
+	BPH        string    `json:"business_phone"`
+	CPH        string    `json:"mobile_phone"`
+	Email      string    `json:"email"`
+	VIN        string    `json:"VIN"`
+	Year       string    `json:"year"`
+	Make       string    `json:"make"`
+	Model      string    `json:"model"`
+	DelDate    time.Time `json:"delivery_date"`
+	Date       time.Time `json:"last_service_date"`
+	DSFwalkseq string    `json:"DSF_Walk_Sequence"`
+	CRRT       string    `json:"CRRT"`
+	KBB        string    `json:"KBB"`
 }
 
 // Parser holds the header field map and reader
@@ -65,7 +69,6 @@ func (p *Parser) UnMarshalCSV() ([]*Record, error) {
 		hdrmp := make(map[string]int)
 		if i == 0 {
 			for i, v := range row {
-				v = lCase(v)
 				if _, ok := hdrmp[v]; ok == true {
 					return nil, fmt.Errorf("%v : Duplicate header field", v)
 				}
@@ -120,26 +123,19 @@ func (p *Parser) UnMarshalCSV() ([]*Record, error) {
 					p.header["kbb"] = i
 				}
 			}
-		}
 
-		// Check that all required fields are present
-		reqFields := []string{"firstname", "lastname", "address1", "city", "state", "zip"}
-		for _, v := range reqFields {
-			if _, ok := p.header[v]; ok != true {
-				return nil, fmt.Errorf("%v : Missing required header fields [firstname, lastname, address1, city, state, zip]", v)
+			// Check that all required fields are present
+			reqFields := []string{"firstname", "lastname", "address1", "city", "state", "zip"}
+			for _, v := range reqFields {
+				if _, ok := p.header[v]; ok != true {
+					return nil, fmt.Errorf("%v : Missing required header fields [firstname, lastname, address1, city, state, zip]", v)
+				}
 			}
+			// continue
 		}
 
-		// initialize new record instance
+		// initialize new record instance then unmarshall records
 		r := &Record{}
-
-		// parse Zip code field into Zip & Zip4
-		zip, zip4 := parseZip(row[p.header["zip"]])
-		r.Zip = zip
-		if zip4 != "" {
-			r.Zip4 = zip4
-		}
-
 		for header := range p.header {
 			switch header {
 			case "fullname":
@@ -158,6 +154,10 @@ func (p *Parser) UnMarshalCSV() ([]*Record, error) {
 				r.City = tCase(row[p.header[header]])
 			case "state":
 				r.State = uCase(row[p.header[header]])
+			case "zip":
+				r.Zip = row[p.header[header]]
+			case "zip4":
+				r.Zip4 = row[p.header[header]]
 			case "hph":
 				r.HPH = formatPhone(row[p.header[header]])
 			case "bph":
@@ -175,17 +175,37 @@ func (p *Parser) UnMarshalCSV() ([]*Record, error) {
 			case "model":
 				r.Model = tCase(row[p.header[header]])
 			case "deldate":
-				r.DelDate = row[p.header[header]]
+				r.DelDate = parseDate(row[p.header[header]])
 			case "date":
-				r.Date = row[p.header[header]]
+				r.Date = parseDate(row[p.header[header]])
 			case "dsfwalkseq":
 				r.DSFwalkseq = stripSep(row[p.header[header]])
 			case "crrt":
-				r.CRRT = row[p.header[header]]
+				r.CRRT = stripSep(row[p.header[header]])
 			case "kbb":
 				r.KBB = stripSep(row[p.header[header]])
 			}
 		}
+
+		// validate Fullname, First Name, Last Name & MI
+		if r.Fullname != "" && (r.Firstname == "" || r.Lastname == "") {
+			name := names.Parse(r.Fullname)
+			r.Firstname = tCase(name.FirstName)
+			r.MI = uCase(name.MiddleName)
+			r.Lastname = tCase(name.LastName)
+		} else {
+			r.Firstname = tCase(r.Firstname)
+			r.MI = uCase(r.MI)
+			r.Lastname = tCase(r.Lastname)
+		}
+
+		// parse Zip code field into Zip & Zip4
+		zip, zip4 := parseZip(r.Zip)
+		r.Zip = zip
+		if zip4 != "" {
+			r.Zip4 = zip4
+		}
+
 		records = append(records, r)
 	}
 	return records, nil
@@ -205,12 +225,12 @@ func lCase(f string) string {
 
 func parseZip(zip string) (string, string) {
 	switch {
-	case regexp.MustCompile(`^[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$`).MatchString(zip):
+	case regexp.MustCompile(`(?i)^[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$`).MatchString(zip):
 		return trimZeros(zip[:5]), trimZeros(zip[5:])
-	case regexp.MustCompile(`^[0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]$`).MatchString(zip):
+	case regexp.MustCompile(`(?i)^[0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]$`).MatchString(zip):
 		zsplit := strings.Split(zip, "-")
 		return trimZeros(zsplit[0]), trimZeros(zsplit[1])
-	case regexp.MustCompile(`^[0-9][0-9][0-9][0-9][0-9] [0-9][0-9][0-9][0-9]$`).MatchString(zip):
+	case regexp.MustCompile(`(?i)^[0-9][0-9][0-9][0-9][0-9] [0-9][0-9][0-9][0-9]$`).MatchString(zip):
 		zsplit := strings.Split(zip, " ")
 		return trimZeros(zsplit[0]), trimZeros(zsplit[1])
 	default:
@@ -236,10 +256,24 @@ func formatPhone(p string) string {
 		return ""
 	}
 }
+
 func stripSep(p string) string {
 	sep := []string{"'", "#", "%", "$", "-", ".", "*", "(", ")", ":", ";", "{", "}", "|", " "}
 	for _, v := range sep {
 		p = strings.Replace(p, v, "", -1)
 	}
 	return p
+}
+
+func parseDate(d string) time.Time {
+	if d != "" {
+		formats := []string{"1/2/2006", "1-2-2006", "1/2/06", "1-2-06",
+			"2006/1/2", "2006-1-2", time.RFC3339}
+		for _, f := range formats {
+			if date, err := time.Parse(f, d); err == nil {
+				return date
+			}
+		}
+	}
+	return time.Time{}
 }
