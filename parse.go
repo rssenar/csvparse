@@ -5,34 +5,33 @@ import (
 	"fmt"
 	"io"
 	"regexp"
-	"time"
 )
 
-type record struct {
-	ID         int       `json:"id"`
-	Fullname   string    `json:"full_name"`
-	Firstname  string    `json:"first_name"`
-	MI         string    `json:"middle_name"`
-	Lastname   string    `json:"last_name"`
-	Address1   string    `json:"address_1"`
-	Address2   string    `json:"address_2"`
-	City       string    `json:"city"`
-	State      string    `json:"state"`
-	Zip        string    `json:"zip"`
-	Zip4       string    `json:"zip_4"`
-	HPH        string    `json:"home_phone"`
-	BPH        string    `json:"business_phone"`
-	CPH        string    `json:"mobile_phone"`
-	Email      string    `json:"email"`
-	VIN        string    `json:"VIN"`
-	Year       string    `json:"year"`
-	Make       string    `json:"make"`
-	Model      string    `json:"model"`
-	DelDate    time.Time `json:"delivery_date"`
-	Date       time.Time `json:"date"`
-	DSFwalkseq string    `json:"DSF_Walk_Sequence"`
-	CRRT       string    `json:"CRRT"`
-	ErrStat    string    `json:"Status"`
+type Record struct {
+	ID         int    `json:"id"`
+	Fullname   string `json:"full_name"`
+	Firstname  string `json:"first_name"`
+	MI         string `json:"middle_name"`
+	Lastname   string `json:"last_name"`
+	Address1   string `json:"address_1"`
+	Address2   string `json:"address_2"`
+	City       string `json:"city"`
+	State      string `json:"state"`
+	Zip        string `json:"zip"`
+	Zip4       string `json:"zip_4"`
+	HPH        string `json:"home_phone"`
+	BPH        string `json:"business_phone"`
+	CPH        string `json:"mobile_phone"`
+	Email      string `json:"email"`
+	VIN        string `json:"VIN"`
+	Year       string `json:"year"`
+	Make       string `json:"make"`
+	Model      string `json:"model"`
+	DelDate    string `json:"delivery_date"`
+	Date       string `json:"date"`
+	DSFwalkseq string `json:"DSF_Walk_Sequence"`
+	CRRT       string `json:"CRRT"`
+	KBB        string `json:"KBB"`
 }
 
 type Parser struct {
@@ -47,15 +46,15 @@ func New(input io.ReadCloser) *Parser {
 	}
 }
 
-func (p *Parser) Columns() error {
+func (p *Parser) UnMarshalCSV() (Records []Record, err error) {
 	rdr := csv.NewReader(p.file)
 	rows, err := rdr.ReadAll()
 	if err != nil {
-		return fmt.Errorf("%v : unable to parse file, csv format required", err)
+		return nil, fmt.Errorf("%v : unable to parse file, csv format required", err)
 	}
 	for i, v := range rows[:][0] {
 		switch {
-		case regexp.MustCompile(`(?i)^[Ff]ul[Nn]ame$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^[Ff]ull[Nn]ame$`).MatchString(v):
 			p.header["fullname"] = i
 		case regexp.MustCompile(`(?i)^[Ff]irst[Nn]ame|^[Ff]irst [Nn]ame$`).MatchString(v):
 			p.header["firstname"] = i
@@ -63,9 +62,9 @@ func (p *Parser) Columns() error {
 			p.header["mi"] = i
 		case regexp.MustCompile(`(?i)^[Ll]ast[Nn]ame|^[Ll]ast [Nn]ame$`).MatchString(v):
 			p.header["lastname"] = i
-		case regexp.MustCompile(`(?i)^[Aa]ddress$|^[Aa]ddress.+1$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^[Aa]ddress1?$`).MatchString(v):
 			p.header["address1"] = i
-		case regexp.MustCompile(`(?i)^[Aa]ddress.+2$`).MatchString(v):
+		case regexp.MustCompile(`(?i)^[Aa]ddress2$`).MatchString(v):
 			p.header["address2"] = i
 		case regexp.MustCompile(`(?i)^[Cc]ity$`).MatchString(v):
 			p.header["city"] = i
@@ -103,9 +102,104 @@ func (p *Parser) Columns() error {
 			p.header["kbb"] = i
 		}
 	}
-	for a, b := range rows[:][0] {
-		fmt.Println(a, b)
+
+	// Check header for required fields
+	reqFields := []string{"firstname", "lastname", "address1", "city", "state", "zip"}
+	for _, v := range reqFields {
+		if _, ok := p.header[v]; ok != true {
+			return nil, fmt.Errorf("%v : Missing required column", v)
+		}
 	}
-	fmt.Println(p.header)
-	return nil
+
+	var r Record
+	for _, rec := range rows[:][1:] {
+		for hdr := range p.header {
+			switch hdr {
+			case "fullname":
+				r.Fullname = rec[p.header[hdr]]
+			case "firstname":
+				r.Firstname = rec[p.header[hdr]]
+			case "mi":
+				r.MI = rec[p.header[hdr]]
+			case "lastname":
+				r.Lastname = rec[p.header[hdr]]
+			case "address1":
+				r.Address1 = rec[p.header[hdr]]
+			case "address2":
+				r.Address2 = rec[p.header[hdr]]
+			case "city":
+				r.City = rec[p.header[hdr]]
+			case "state":
+				r.State = rec[p.header[hdr]]
+			case "zip":
+				r.Zip = rec[p.header[hdr]]
+			case "zip4":
+				r.Zip4 = rec[p.header[hdr]]
+			case "hph":
+				r.HPH = rec[p.header[hdr]]
+			case "bph":
+				r.BPH = rec[p.header[hdr]]
+			case "cph":
+				r.CPH = rec[p.header[hdr]]
+			case "email":
+				r.Email = rec[p.header[hdr]]
+			case "vin":
+				r.VIN = rec[p.header[hdr]]
+			case "year":
+				r.Year = rec[p.header[hdr]]
+			case "make":
+				r.Make = rec[p.header[hdr]]
+			case "model":
+				r.Model = rec[p.header[hdr]]
+			case "deldate":
+				r.DelDate = rec[p.header[hdr]]
+			case "date":
+				r.Date = rec[p.header[hdr]]
+			case "dsfwalkseq":
+				r.DSFwalkseq = rec[p.header[hdr]]
+			case "crrt":
+				r.CRRT = rec[p.header[hdr]]
+			case "kbb":
+				r.KBB = rec[p.header[hdr]]
+			}
+		}
+		Records = append(Records, r)
+	}
+	return
 }
+
+// for _, row := range rows[:][1:] {
+// 	w := csv.NewWriter(os.Stdout)
+// 	if err := w.Write(row); err != nil {
+// 		return fmt.Errorf("%v : error writing record to csv", err)
+// 	}
+// 	// Write any buffered data to the underlying writer (standard output).
+// 	w.Flush()
+
+// 	if err := w.Error(); err != nil {
+// 		return fmt.Errorf("%v : error writing to stdout", err)
+// 	}
+// }
+
+// for a, b := range rows[:][0] {
+// 	fmt.Println(a, b)
+// }
+
+// type kv struct {
+// 	Key   string
+// 	Value int
+// }
+
+// var ss []kv
+// for k, v := range p.header {
+// 	ss = append(ss, kv{k, v})
+// }
+
+// sort.Slice(ss, func(i, j int) bool {
+// 	return ss[i].Value < ss[j].Value
+// })
+
+// for _, str := range ss {
+// 	fmt.Printf("%s, %d\n", str.Key, str.Value)
+// }
+// fmt.Printf("%v", x)

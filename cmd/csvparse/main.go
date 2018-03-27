@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -31,9 +33,12 @@ func main() {
 		input = os.Stdin
 	}
 
-	parse := csvparse.New(input)
-	if err := parse.Columns(); err != nil {
+	p := csvparse.New(input)
+	records, err := p.UnMarshalCSV()
+	if err != nil {
 		log.Fatalln(err)
 	}
 
+	data, _ := json.MarshalIndent(records, " ", " ")
+	fmt.Println(string(data))
 }
