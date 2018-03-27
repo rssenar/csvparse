@@ -131,7 +131,7 @@ func (p *Parser) UnMarshalCSV() ([]*Record, error) {
 					return nil, fmt.Errorf("%v : Missing required header fields [firstname, lastname, address1, city, state, zip]", v)
 				}
 			}
-			// continue
+			continue
 		}
 
 		// initialize new record instance then unmarshall records
@@ -139,68 +139,68 @@ func (p *Parser) UnMarshalCSV() ([]*Record, error) {
 		for header := range p.header {
 			switch header {
 			case "fullname":
-				r.Fullname = tCase(row[p.header[header]])
+				r.Fullname = TCase(row[p.header[header]])
 			case "firstname":
-				r.Firstname = tCase(row[p.header[header]])
+				r.Firstname = TCase(row[p.header[header]])
 			case "mi":
-				r.MI = uCase(row[p.header[header]])
+				r.MI = UCase(row[p.header[header]])
 			case "lastname":
-				r.Lastname = tCase(row[p.header[header]])
+				r.Lastname = TCase(row[p.header[header]])
 			case "address1":
-				r.Address1 = tCase(row[p.header[header]])
+				r.Address1 = TCase(row[p.header[header]])
 			case "address2":
-				r.Address2 = tCase(row[p.header[header]])
+				r.Address2 = TCase(row[p.header[header]])
 			case "city":
-				r.City = tCase(row[p.header[header]])
+				r.City = TCase(row[p.header[header]])
 			case "state":
-				r.State = uCase(row[p.header[header]])
+				r.State = UCase(row[p.header[header]])
 			case "zip":
 				r.Zip = row[p.header[header]]
 			case "zip4":
 				r.Zip4 = row[p.header[header]]
 			case "hph":
-				r.HPH = formatPhone(row[p.header[header]])
+				r.HPH = FormatPhone(row[p.header[header]])
 			case "bph":
-				r.BPH = formatPhone(row[p.header[header]])
+				r.BPH = FormatPhone(row[p.header[header]])
 			case "cph":
-				r.CPH = formatPhone(row[p.header[header]])
+				r.CPH = FormatPhone(row[p.header[header]])
 			case "email":
-				r.Email = lCase(row[p.header[header]])
+				r.Email = LCase(row[p.header[header]])
 			case "vin":
-				r.VIN = uCase(row[p.header[header]])
+				r.VIN = UCase(row[p.header[header]])
 			case "year":
 				r.Year = row[p.header[header]]
 			case "make":
-				r.Make = tCase(row[p.header[header]])
+				r.Make = TCase(row[p.header[header]])
 			case "model":
-				r.Model = tCase(row[p.header[header]])
+				r.Model = TCase(row[p.header[header]])
 			case "deldate":
-				r.DelDate = parseDate(row[p.header[header]])
+				r.DelDate = ParseDate(row[p.header[header]])
 			case "date":
-				r.Date = parseDate(row[p.header[header]])
+				r.Date = ParseDate(row[p.header[header]])
 			case "dsfwalkseq":
-				r.DSFwalkseq = stripSep(row[p.header[header]])
+				r.DSFwalkseq = StripSep(row[p.header[header]])
 			case "crrt":
-				r.CRRT = stripSep(row[p.header[header]])
+				r.CRRT = StripSep(row[p.header[header]])
 			case "kbb":
-				r.KBB = stripSep(row[p.header[header]])
+				r.KBB = StripSep(row[p.header[header]])
 			}
 		}
 
 		// validate Fullname, First Name, Last Name & MI
 		if r.Fullname != "" && (r.Firstname == "" || r.Lastname == "") {
 			name := names.Parse(r.Fullname)
-			r.Firstname = tCase(name.FirstName)
-			r.MI = uCase(name.MiddleName)
-			r.Lastname = tCase(name.LastName)
+			r.Firstname = TCase(name.FirstName)
+			r.MI = UCase(name.MiddleName)
+			r.Lastname = TCase(name.LastName)
 		} else {
-			r.Firstname = tCase(r.Firstname)
-			r.MI = uCase(r.MI)
-			r.Lastname = tCase(r.Lastname)
+			r.Firstname = TCase(r.Firstname)
+			r.MI = UCase(r.MI)
+			r.Lastname = TCase(r.Lastname)
 		}
 
 		// parse Zip code field into Zip & Zip4
-		zip, zip4 := parseZip(r.Zip)
+		zip, zip4 := ParseZip(r.Zip)
 		r.Zip = zip
 		if zip4 != "" {
 			r.Zip4 = zip4
@@ -211,42 +211,49 @@ func (p *Parser) UnMarshalCSV() ([]*Record, error) {
 	return records, nil
 }
 
-func tCase(f string) string {
+// TCase transforms string to title case and trims leading & trailing white space
+func TCase(f string) string {
 	return strings.TrimSpace(strings.Title(strings.ToLower(f)))
 }
 
-func uCase(f string) string {
+// UCase transforms string to upper case and trims leading & trailing white space
+func UCase(f string) string {
 	return strings.TrimSpace(strings.ToUpper(f))
 }
 
-func lCase(f string) string {
+// LCase transforms string to lower case and trims leading & trailing white space
+func LCase(f string) string {
 	return strings.TrimSpace(strings.ToLower(f))
 }
 
-func parseZip(zip string) (string, string) {
+// ParseZip perses ZIP code to Zip & Zip4
+func ParseZip(zip string) (string, string) {
 	switch {
 	case regexp.MustCompile(`(?i)^[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]$`).MatchString(zip):
-		return trimZeros(zip[:5]), trimZeros(zip[5:])
+		return TrimZeros(zip[:5]), TrimZeros(zip[5:])
 	case regexp.MustCompile(`(?i)^[0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]$`).MatchString(zip):
 		zsplit := strings.Split(zip, "-")
-		return trimZeros(zsplit[0]), trimZeros(zsplit[1])
+		return TrimZeros(zsplit[0]), TrimZeros(zsplit[1])
 	case regexp.MustCompile(`(?i)^[0-9][0-9][0-9][0-9][0-9] [0-9][0-9][0-9][0-9]$`).MatchString(zip):
 		zsplit := strings.Split(zip, " ")
-		return trimZeros(zsplit[0]), trimZeros(zsplit[1])
+		return TrimZeros(zsplit[0]), TrimZeros(zsplit[1])
 	default:
 		return zip, ""
 	}
 }
 
-func trimZeros(s string) string {
-	for i := 0; i < len(s); i++ {
+// TrimZeros removed leading Zeros
+func TrimZeros(s string) string {
+	l := len(s)
+	for i := 1; i <= l; i++ {
 		s = strings.TrimPrefix(s, "0")
 	}
 	return s
 }
 
-func formatPhone(p string) string {
-	p = stripSep(p)
+// FormatPhone re-formats phone field
+func FormatPhone(p string) string {
+	p = StripSep(p)
 	switch len(p) {
 	case 10:
 		return fmt.Sprintf("(%v) %v-%v", p[0:3], p[3:6], p[6:10])
@@ -257,18 +264,19 @@ func formatPhone(p string) string {
 	}
 }
 
-func stripSep(p string) string {
-	sep := []string{"'", "#", "%", "$", "-", ".", "*", "(", ")", ":", ";", "{", "}", "|", " "}
+// StripSep removes irrelevant characters
+func StripSep(p string) string {
+	sep := []string{"'", "#", "%", "$", "-", "+", ".", "*", "(", ")", ":", ";", "{", "}", "|", "&", " "}
 	for _, v := range sep {
 		p = strings.Replace(p, v, "", -1)
 	}
 	return p
 }
 
-func parseDate(d string) time.Time {
+// ParseDate converts date string to time.Time
+func ParseDate(d string) time.Time {
 	if d != "" {
-		formats := []string{"1/2/2006", "1-2-2006", "1/2/06", "1-2-06",
-			"2006/1/2", "2006-1-2", time.RFC3339}
+		formats := []string{"1/2/2006", "1-2-2006", "1/2/06", "1-2-06", "2006/1/2", "2006-1-2", time.RFC3339}
 		for _, f := range formats {
 			if date, err := time.Parse(f, d); err == nil {
 				return date
