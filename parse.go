@@ -132,7 +132,7 @@ func (p *Parser) UnMarshalCSV(vh *bool) error {
 				reqFields := []string{"firstname", "lastname", "address1", "city", "state", "zip"}
 				for _, v := range reqFields {
 					if _, ok := p.header[v]; ok != true {
-						return fmt.Errorf("%v : Missing required header field", v)
+						return fmt.Errorf("Error : Missing [ %v ] - required header field", v)
 					}
 				}
 			}
