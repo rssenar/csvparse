@@ -136,6 +136,7 @@ func (p *Parser) UnMarshalCSV() ([]*Record, error) {
 
 		// initialize new record instance then unmarshall records
 		r := &Record{}
+
 		for header := range p.header {
 			switch header {
 			case "fullname":
