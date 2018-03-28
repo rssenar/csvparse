@@ -58,7 +58,7 @@ func New(input io.Reader) *Parser {
 }
 
 // UnMarshalCSV unmarshalls CSV file to record struct
-func (p *Parser) UnMarshalCSV(val bool) error {
+func (p *Parser) UnMarshalCSV(vh *bool) error {
 	rdr := csv.NewReader(p.file)
 	for i := 0; ; i++ {
 		row, err := rdr.Read()
@@ -127,11 +127,12 @@ func (p *Parser) UnMarshalCSV(val bool) error {
 			}
 
 			// Check that all required fields are present
-			if val {
+			// you can modify with command line flag -vh=false/true
+			if *vh {
 				reqFields := []string{"firstname", "lastname", "address1", "city", "state", "zip"}
 				for _, v := range reqFields {
 					if _, ok := p.header[v]; ok != true {
-						return fmt.Errorf("%v : Missing required header fields [firstname, lastname, address1, city, state, zip]", v)
+						return fmt.Errorf("%v : Missing required header field", v)
 					}
 				}
 			}

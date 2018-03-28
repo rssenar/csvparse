@@ -161,9 +161,9 @@ func Test_UnMarshalCSV(t *testing.T) {
 	if err != nil {
 		t.Error("Unable to open test file")
 	}
-
+	vh := true
 	P = cp.New(file)
-	err = P.UnMarshalCSV()
+	err = P.UnMarshalCSV(&vh)
 	if err != nil {
 		t.Error(err)
 	}
