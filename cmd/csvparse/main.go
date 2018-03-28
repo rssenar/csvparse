@@ -1,6 +1,9 @@
 package main
 
 import (
+	"encoding/json"
+	"flag"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -9,12 +12,19 @@ import (
 )
 
 func main() {
+	vhdr := flag.Bool("vhdr", true, "Validate required header fields")
+	otype := flag.String("otype", "csv", "Specify output type: csv | json")
+	flag.Parse()
+
 	var input io.Reader
-	if len(os.Args[1:]) != 0 {
-		if len(os.Args[1:]) > 1 {
+
+	args := flag.Args()
+
+	if len(args) != 0 {
+		if len(args[1:]) > 1 {
 			log.Fatalln("err: Cannot parse multiple files")
 		}
-		file, err := os.Open(os.Args[1])
+		file, err := os.Open(args[1])
 		defer file.Close()
 		if err != nil {
 			log.Fatalf("%v : No such file or directory\n", os.Args[1])
@@ -33,15 +43,21 @@ func main() {
 
 	p := cp.New(input)
 
-	err := p.UnMarshalCSV()
+	err := p.UnMarshalCSV(*vhdr)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	err = p.MarshaltoCSV()
-	if err != nil {
-		log.Fatalln(err)
+	if *otype == "csv" {
+		err = p.MarshaltoCSV()
+		if err != nil {
+			log.Fatalln(err)
+		}
+	} else {
+		data, err := json.MarshalIndent(p.Records, " ", " ")
+		if err != nil {
+			log.Fatalln(err)
+		}
+		fmt.Println(string(data))
 	}
-	// data, _ := json.MarshalIndent(p.Records, " ", " ")
-	// fmt.Println(string(data))
 }
