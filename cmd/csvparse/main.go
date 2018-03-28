@@ -1,13 +1,11 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"os"
 
-	"github.com/rssenar/csvparse"
+	cp "github.com/rssenar/csvparse"
 )
 
 func main() {
@@ -33,12 +31,17 @@ func main() {
 		input = os.Stdin
 	}
 
-	p := csvparse.New(input)
-	records, err := p.UnMarshalCSV()
+	p := cp.New(input)
+
+	err := p.UnMarshalCSV()
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	data, _ := json.MarshalIndent(records, " ", " ")
-	fmt.Println(string(data))
+	err = p.MarshaltoCSV()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	// data, _ := json.MarshalIndent(p.Records, " ", " ")
+	// fmt.Println(string(data))
 }

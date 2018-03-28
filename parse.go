@@ -4,7 +4,9 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -41,36 +43,36 @@ type Record struct {
 
 // Parser holds the header field map and reader
 type Parser struct {
-	header map[string]int
-	file   io.Reader
+	header  map[string]int
+	file    io.Reader
+	Records []*Record
 }
 
 // New initializes a new parser
 func New(input io.Reader) *Parser {
 	return &Parser{
-		header: map[string]int{},
-		file:   input,
+		header:  map[string]int{},
+		file:    input,
+		Records: []*Record{},
 	}
 }
 
 // UnMarshalCSV unmarshalls CSV file to record struct
-func (p *Parser) UnMarshalCSV() ([]*Record, error) {
-	records := []*Record{}
+func (p *Parser) UnMarshalCSV() error {
 	rdr := csv.NewReader(p.file)
-
 	for i := 0; ; i++ {
 		row, err := rdr.Read()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			return nil, fmt.Errorf("%v : unable to parse file, csv format required", err)
+			return fmt.Errorf("%v : unable to parse file, csv format required", err)
 		}
 		hdrmp := make(map[string]int)
 		if i == 0 {
 			for i, v := range row {
 				if _, ok := hdrmp[v]; ok == true {
-					return nil, fmt.Errorf("%v : Duplicate header field", v)
+					return fmt.Errorf("%v : Duplicate header field", v)
 				}
 				hdrmp[v]++
 
@@ -128,7 +130,7 @@ func (p *Parser) UnMarshalCSV() ([]*Record, error) {
 			reqFields := []string{"firstname", "lastname", "address1", "city", "state", "zip"}
 			for _, v := range reqFields {
 				if _, ok := p.header[v]; ok != true {
-					return nil, fmt.Errorf("%v : Missing required header fields [firstname, lastname, address1, city, state, zip]", v)
+					return fmt.Errorf("%v : Missing required header fields [firstname, lastname, address1, city, state, zip]", v)
 				}
 			}
 			continue
@@ -207,9 +209,101 @@ func (p *Parser) UnMarshalCSV() ([]*Record, error) {
 			r.Zip4 = zip4
 		}
 
-		records = append(records, r)
+		p.Records = append(p.Records, r)
 	}
-	return records, nil
+	return nil
+}
+
+// MarshaltoCSV marshalls the Record struct then outputs to csv
+func (p *Parser) MarshaltoCSV() error {
+	hdr := struct {
+		PKey, Fullname, Firstname, MI, Lastname, Address1, Address2, City, State, Zip, Zip4,
+		HPH, BPH, CPH, Email, VIN, Year, Make, Model, DelDate, Date, DSFwalkseq, CRRT, KBB string
+	}{
+		"PKey", "Fullname", "Firstname", "MI", "Lastname", "Address1", "Address2", "City", "State", "Zip", "Zip4",
+		"HPH", "BPH", "CPH", "Email", "VIN", "Year", "Make", "Model", "DelDate", "Date", "DSFwalkseq", "CRRT", "KBB",
+	}
+	wtr := csv.NewWriter(os.Stdout)
+	for i, r := range p.Records {
+		if i == 0 {
+			hrow := []string{
+				hdr.PKey,
+				hdr.Firstname,
+				hdr.MI,
+				hdr.Lastname,
+				hdr.Address1,
+				hdr.Address2,
+				hdr.City,
+				hdr.State,
+				hdr.Zip,
+				hdr.Zip4,
+				hdr.HPH,
+				hdr.BPH,
+				hdr.CPH,
+				hdr.Email,
+				hdr.VIN,
+				hdr.Year,
+				hdr.Make,
+				hdr.Model,
+				hdr.DelDate,
+				hdr.Date,
+				hdr.DSFwalkseq,
+				hdr.CRRT,
+				hdr.KBB,
+			}
+			if err := wtr.Write(hrow); err != nil {
+				return fmt.Errorf("error writing record to csv: %v", err)
+			}
+			continue
+		}
+
+		var DelDate string
+		if !r.DelDate.IsZero() {
+			DelDate = r.DelDate.Format(time.RFC3339)
+		} else {
+			DelDate = ""
+		}
+
+		var Date string
+		if !r.Date.IsZero() {
+			Date = r.Date.Format(time.RFC3339)
+		} else {
+			Date = ""
+		}
+
+		row := []string{
+			strconv.Itoa(r.PKey),
+			r.Firstname,
+			r.MI,
+			r.Lastname,
+			r.Address1,
+			r.Address2,
+			r.City,
+			r.State,
+			r.Zip,
+			r.Zip4,
+			r.HPH,
+			r.BPH,
+			r.CPH,
+			r.Email,
+			r.VIN,
+			r.Year,
+			r.Make,
+			r.Model,
+			DelDate,
+			Date,
+			r.DSFwalkseq,
+			r.CRRT,
+			r.KBB,
+		}
+		wtr.Write(row)
+	}
+	wtr.Flush()
+
+	if err := wtr.Error(); err != nil {
+		return fmt.Errorf("error writing to output: %v", err)
+	}
+	return nil
 }
 
 // TCase transforms string to title case and trims leading & trailing white space
