@@ -70,6 +70,14 @@ func (d *CSVDecoder) DecodeCSV() ([]*Record, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%v : unable to parse file, csv format required", err)
 		}
+
+		// =======================================
+		// =======================================
+		// =======================================
+		// =======================================
+		// =======================================
+		// =======================================
+
 		hdrmp := make(map[string]int)
 		if i == 0 {
 			for i, v := range row {
