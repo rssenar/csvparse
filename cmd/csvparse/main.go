@@ -1,16 +1,21 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
-	cp "github.com/rssenar/csvparse"
+	"github.com/rssenar/csvparse"
 )
 
 func main() {
+	var (
+		i = flag.Bool("i", false, "Enable output to Indented JSON")
+		v = flag.Bool("v", false, "Enable header field validation")
+		h = flag.String("h", "", "Specify Output fields [PKey,Fullname,Firstname,MI,Lastname,Address1,Address2,City,State,Zip,Zip4,HPH,BPH,CPH,Email,VIN,Year,Make,Model,DelDate,Date,DSFwalkse,CRRT,KBB]")
+	)
 	flag.Parse()
 
 	var input io.Reader
@@ -45,37 +50,32 @@ func main() {
 		input = os.Stdin
 	}
 
-	p := cp.New(input)
-	// UnMarshalCSV unmarshalls io.reader into csvparse.Record struct
-	// []*Record are stored in the *Parser.Records struct filed
-	err := p.UnMarshalCSV(v)
+	data, err := csvparse.NewDecoder(input, v).DecodeCSV()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	if *ij {
+	// Set output field options if -h flags are specified
+	var fields []string
+	if *h == "" {
+		fields = nil
+	} else {
+		fields = strings.Split(*h, ",")
+	}
+
+	if *i {
 		// MarshalIndent outputs []*Record to JSON for output to os.Stdout
 		// []*Record are stored in the *Parser.Records struct filed
-		data, err := json.MarshalIndent(p.Records, " ", " ")
+		err := csvparse.NewEncoder(os.Stdout).EncodeJSON(data)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		fmt.Println(string(data))
-	} else if *j {
-		// Marshal outputs []*Record to JSON for output to os.Stdout
-		// []*Record are stored in the *Parser.Records struct filed
-		data, err := json.Marshal(p.Records)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		fmt.Println(string(data))
 	} else {
 		// MarshaltoCSV marshals []*Record to []string for output to os.Stdout
 		// []*Record are stored in the *Parser.Records struct filed
-		err = p.MarshaltoCSV()
+		err = csvparse.NewEncoder(os.Stdout).EncodeCSV(data, fields)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

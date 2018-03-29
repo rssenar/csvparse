@@ -8,7 +8,7 @@ import (
 	cp "github.com/rssenar/csvparse"
 )
 
-var P *cp.Parser
+var Records []*cp.Record
 
 func Test_tCase(t *testing.T) {
 	cases := []struct {
@@ -155,15 +155,14 @@ func expDate(date string) time.Time {
 	return time.Time{}
 }
 
-func Test_UnMarshalCSV(t *testing.T) {
+func Test_DecodeCSV(t *testing.T) {
 	file, err := os.Open("testfile.csv")
 	defer file.Close()
 	if err != nil {
 		t.Error("Unable to open test file")
 	}
-	vh := true
-	P = cp.New(file)
-	err = P.UnMarshalCSV(&vh)
+	var vh bool = true
+	Records, err = cp.NewDecoder(file, &vh).DecodeCSV()
 	if err != nil {
 		t.Error(err)
 	}
@@ -239,7 +238,7 @@ func Test_UnMarshalCSV(t *testing.T) {
 			KBB:        "",
 		},
 	}
-	for i, r := range P.Records {
+	for i, r := range Records {
 		if r.Fullname != expCase[i].Fullname {
 			t.Errorf("Expected %v, got %v", expCase[i].Fullname, r.Fullname)
 		}
@@ -306,8 +305,8 @@ func Test_UnMarshalCSV(t *testing.T) {
 	}
 }
 
-func Test_MarshaltoCSV(t *testing.T) {
-	err := P.MarshaltoCSV()
+func EncodeCSV(t *testing.T) {
+	err := cp.NewEncoder(os.Stdout).EncodeCSV(Records, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -383,7 +382,7 @@ func Test_MarshaltoCSV(t *testing.T) {
 			KBB:        "",
 		},
 	}
-	for i, r := range P.Records {
+	for i, r := range Records {
 		if r.Fullname != expCase[i].Fullname {
 			t.Errorf("Expected %v, got %v", expCase[i].Fullname, r.Fullname)
 		}
