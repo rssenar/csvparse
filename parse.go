@@ -15,30 +15,29 @@ import (
 
 // Record represents a customer
 type Record struct {
-	PKey       int       `json:"Primary_Key"`
-	Fullname   string    `json:"full_name"`
-	Firstname  string    `json:"first_name"`
-	MI         string    `json:"middle_name"`
-	Lastname   string    `json:"last_name"`
-	Address1   string    `json:"address_1"`
-	Address2   string    `json:"address_2"`
-	City       string    `json:"city"`
-	State      string    `json:"state"`
-	Zip        string    `json:"zip"`
-	Zip4       string    `json:"zip_4"`
-	HPH        string    `json:"home_phone"`
-	BPH        string    `json:"business_phone"`
-	CPH        string    `json:"mobile_phone"`
-	Email      string    `json:"email"`
-	VIN        string    `json:"VIN"`
-	Year       string    `json:"year"`
-	Make       string    `json:"make"`
-	Model      string    `json:"model"`
-	DelDate    time.Time `json:"delivery_date"`
-	Date       time.Time `json:"last_service_date"`
-	DSFwalkseq string    `json:"DSF_Walk_Sequence"`
-	CRRT       string    `json:"CRRT"`
-	KBB        string    `json:"KBB"`
+	Fullname   string    `json:"full_name" csv:"(?i)^[Ff]ull[Nn]ame$"`
+	Firstname  string    `json:"first_name" csv:"(?i)^[Ff]irst[Nn]ame$|^[Ff]irst [Nn]ame$"`
+	MI         string    `json:"middle_name" csv:"(?i)^mi$"`
+	Lastname   string    `json:"last_name" csv:"(?i)^[Ll]ast[Nn]ame$|^[Ll]ast [Nn]ame$"`
+	Address1   string    `json:"address_1" csv:"(?i)^[Aa]ddress1?$|^[Aa]ddress[ _-]1?$"`
+	Address2   string    `json:"address_2" csv:"(?i)^[Aa]ddress2$|^[Aa]ddress[ _-]2$"`
+	City       string    `json:"city" csv:"(?i)^[Cc]ity$"`
+	State      string    `json:"state" csv:"(?i)^[Ss]tate$|^[Ss][Tt]$"`
+	Zip        string    `json:"zip" csv:"(?i)^[Zz]ip$"`
+	Zip4       string    `json:"zip_4" csv:"(?i)^[Zz]ip4$|^4zip$"`
+	HPH        string    `json:"home_phone" csv:"(?i)^hph$"`
+	BPH        string    `json:"business_phone" csv:"(?i)^bph$"`
+	CPH        string    `json:"mobile_phone" csv:"(?i)^cph$"`
+	Email      string    `json:"email" csv:"(?i)^[Ee]mail$"`
+	VIN        string    `json:"VIN" csv:"(?i)^[Vv]in$"`
+	Year       string    `json:"year" csv:"(?i)^[Yy]ear$|^[Vv]yr$"`
+	Make       string    `json:"make" csv:"(?i)^[Mm]ake$|^[Vv]mk$"`
+	Model      string    `json:"model" csv:"(?i)^[Mm]odel$|^[Vv]md$"`
+	DelDate    time.Time `json:"delivery_date" csv:"(?i)^[Dd]eldate$"`
+	Date       time.Time `json:"last_service_date" csv:"(?i)^[Dd]ate$"`
+	DSFwalkseq string    `json:"DSF_Walk_Sequence" csv:"(?i)^DSF_WALK_SEQ$"`
+	CRRT       string    `json:"CRRT" csv:"(?i)^[Cc]rrt$"`
+	KBB        string    `json:"KBB" csv:"(?i)^KBB$"`
 }
 
 // CSVDecoder holds the header field map and reader
@@ -70,14 +69,6 @@ func (d *CSVDecoder) DecodeCSV() ([]*Record, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%v : unable to parse file, csv format required", err)
 		}
-
-		// =======================================
-		// =======================================
-		// =======================================
-		// =======================================
-		// =======================================
-		// =======================================
-
 		hdrmp := make(map[string]int)
 		if i == 0 {
 			for i, v := range row {
