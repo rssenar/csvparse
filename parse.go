@@ -16,29 +16,29 @@ import (
 
 // Record represents a customer
 type Record struct {
-	Fullname   string    `json:"Full_name" csv:"(?i)^fullname$"`
-	Firstname  string    `json:"First_name" csv:"(?i)^first[ _-]?name$"`
-	MI         string    `json:"Middle_name" csv:"(?i)^mi$"`
-	Lastname   string    `json:"Last_name" csv:"(?i)^last[ _-]?name$"`
-	Address1   string    `json:"Address_1" csv:"(?i)^address[ _-]?1?$"`
-	Address2   string    `json:"Address_2" csv:"(?i)^address[ _-]?2$"`
-	City       string    `json:"City" csv:"(?i)^[Cc]ity$"`
-	State      string    `json:"State" csv:"(?i)^state$|^st$"`
-	Zip        string    `json:"Zip" csv:"(?i)^zip$"`
-	Zip4       string    `json:"Zip_4" csv:"(?i)^zip4$|^4zip$"`
-	HPH        string    `json:"Home_phone" csv:"(?i)^hph$"`
-	BPH        string    `json:"Business_phone" csv:"(?i)^bph$"`
-	CPH        string    `json:"Mobile_phone" csv:"(?i)^cph$"`
-	Email      string    `json:"Email" csv:"(?i)^email$"`
-	VIN        string    `json:"VIN" csv:"(?i)^vin$"`
-	Year       string    `json:"Year" csv:"(?i)^year$|^vyr$"`
-	Make       string    `json:"Make" csv:"(?i)^make$|^vmk$"`
-	Model      string    `json:"Model" csv:"(?i)^model$|^vmd$"`
-	DelDate    time.Time `json:"Delivery_date" csv:"(?i)^del[ ]?date[s]?$"`
-	Date       time.Time `json:"Last_service_date" csv:"(?i)^date[s]?$"`
-	DSFwalkseq string    `json:"DSF_Walk_Sequence" csv:"(?i)^DSF_WALK_SEQ$"`
-	CRRT       string    `json:"CRRT" csv:"(?i)^crrt$"`
-	KBB        string    `json:"KBB" csv:"(?i)^kbb$"`
+	Fullname   string    `json:"Full_name" csv:"(?i)^fullname$" fmt:"tc"`
+	Firstname  string    `json:"First_name" csv:"(?i)^first[ _-]?name$" fmt:"tc"`
+	MI         string    `json:"Middle_name" csv:"(?i)^mi$" fmt:"uc"`
+	Lastname   string    `json:"Last_name" csv:"(?i)^last[ _-]?name$" fmt:"tc"`
+	Address1   string    `json:"Address_1" csv:"(?i)^address[ _-]?1?$" fmt:"tc"`
+	Address2   string    `json:"Address_2" csv:"(?i)^address[ _-]?2$" fmt:"tc"`
+	City       string    `json:"City" csv:"(?i)^city$" fmt:"tc"`
+	State      string    `json:"State" csv:"(?i)^state$|^st$" fmt:"uc"`
+	Zip        string    `json:"Zip" csv:"(?i)^(zip|postal)[ _]?(code)?$" fmt:"uc"`
+	Zip4       string    `json:"Zip_4" csv:"(?i)^zip4$|^4zip$" fmt:"uc"`
+	HPH        string    `json:"Home_phone" csv:"(?i)^hph$|^home[ _]phone$" fmt:"fp"`
+	BPH        string    `json:"Business_phone" csv:"(?i)^bph$|^(work|business)[ _]phone$" fmt:"fp"`
+	CPH        string    `json:"Mobile_phone" csv:"(?i)^cph$|^mobile[ _]phone$" fmt:"fp"`
+	Email      string    `json:"Email" csv:"(?i)^email[ _]?(address)?$" fmt:"lc"`
+	VIN        string    `json:"VIN" csv:"(?i)^vin$" fmt:"-"`
+	Year       string    `json:"Year" csv:"(?i)^year$|^vyr$" fmt:"-"`
+	Make       string    `json:"Make" csv:"(?i)^make$|^vmk$" fmt:"tc"`
+	Model      string    `json:"Model" csv:"(?i)^model$|^vmd$" fmt:"tc"`
+	DelDate    time.Time `json:"Delivery_date" csv:"(?i)^del[ ]?date$" fmt:"-"`
+	Date       time.Time `json:"Last_service_date" csv:"(?i)^date$" fmt:"-"`
+	DSFwalkseq string    `json:"DSF_Walk_Sequence" csv:"(?i)^DSF_WALK_SEQ$" fmt:"uc"`
+	CRRT       string    `json:"CRRT" csv:"(?i)^crrt$" fmt:"uc"`
+	KBB        string    `json:"KBB" csv:"(?i)^kbb$" fmt:"uc"`
 }
 
 // CSVDecoder holds the header field map and reader
@@ -79,7 +79,8 @@ func (d *CSVDecoder) DecodeCSV() ([]Record, error) {
 
 	for i, csvColumnHdr := range headerRow {
 		for j := 0; j < sLen; j++ {
-			if regexp.MustCompile(reflect.Indirect(sValue).Type().Field(j).Tag.Get("csv")).MatchString(csvColumnHdr) {
+			regex := reflect.Indirect(sValue).Type().Field(j).Tag.Get("csv")
+			if regexp.MustCompile(regex).MatchString(csvColumnHdr) {
 				d.header[reflect.Indirect(sValue).Type().Field(j).Name] = i
 			}
 		}
@@ -91,7 +92,8 @@ func (d *CSVDecoder) DecodeCSV() ([]Record, error) {
 			switch sValue.Elem().Field(j).Type() {
 			case reflect.TypeOf(""):
 				if _, ok := d.header[sFName]; ok {
-					val := reformatStringVals(sFName, csvRow[d.header[sFName]])
+					format := reflect.Indirect(sValue).Type().Field(j).Tag.Get("fmt")
+					val := formatStringVals(sFName, format, csvRow[d.header[sFName]])
 					sValue.Elem().FieldByName(sFName).Set(reflect.ValueOf(val))
 				}
 			case reflect.TypeOf(time.Now()):
@@ -100,27 +102,21 @@ func (d *CSVDecoder) DecodeCSV() ([]Record, error) {
 					sValue.Elem().FieldByName(sFName).Set(reflect.ValueOf(val))
 				}
 			}
+			if j == sLen-1 {
+				if r.Fullname != "" && (r.Firstname == "" || r.Lastname == "") {
+					name := names.Parse(r.Fullname)
+					r.Firstname = TCase(name.FirstName)
+					r.MI = UCase(name.MiddleName)
+					r.Lastname = TCase(name.LastName)
+				}
+				zip, zip4 := ParseZip(r.Zip)
+				r.Zip = zip
+				if zip4 != "" {
+					r.Zip4 = zip4
+				}
+			}
 		}
 		d.records = append(d.records, r)
-	}
-
-	// validate Fullname, First Name, Last Name & MI
-	if r.Fullname != "" && (r.Firstname == "" || r.Lastname == "") {
-		name := names.Parse(r.Fullname)
-		r.Firstname = TCase(name.FirstName)
-		r.MI = UCase(name.MiddleName)
-		r.Lastname = TCase(name.LastName)
-	} else {
-		r.Firstname = TCase(r.Firstname)
-		r.MI = UCase(r.MI)
-		r.Lastname = TCase(r.Lastname)
-	}
-
-	// parse Zip code field into Zip & Zip4
-	zip, zip4 := ParseZip(r.Zip)
-	r.Zip = zip
-	if zip4 != "" {
-		r.Zip4 = zip4
 	}
 	return d.records, nil
 }
@@ -145,50 +141,18 @@ func checkForDoubleHeaderNames(hdrs []string) error {
 	return nil
 }
 
-func reformatStringVals(sname, val string) string {
-	switch sname {
-	case "Fullname":
+func formatStringVals(name, format, val string) string {
+	switch format {
+	case "tc":
 		return TCase(val)
-	case "Firstname":
-		return TCase(val)
-	case "MI":
+	case "uc":
 		return UCase(val)
-	case "Lastname":
-		return TCase(val)
-	case "Address1":
-		return TCase(val)
-	case "Address2":
-		return TCase(val)
-	case "City":
-		return TCase(val)
-	case "State":
-		return UCase(val)
-	case "Zip":
-		return UCase(val)
-	case "Zip4":
-		return UCase(val)
-	case "HPH":
-		return FormatPhone(val)
-	case "BPH":
-		return FormatPhone(val)
-	case "CPH":
-		return FormatPhone(val)
-	case "Email":
+	case "lc":
 		return LCase(val)
-	case "VIN":
-		return UCase(val)
-	case "Year":
-		return UCase(val)
-	case "Make":
-		return TCase(val)
-	case "Model":
-		return TCase(val)
-	case "DSFwalkseq":
+	case "fp":
+		return FormatPhone(val)
+	case "ss":
 		return StripSep(val)
-	case "CRRT":
-		return StripSep(val)
-	case "KBB":
-		return UCase(val)
 	}
 	return val
 }
@@ -221,22 +185,12 @@ func (e *CSVEncoder) EncodeCSV(Records []Record) error {
 
 	for _, r := range Records {
 		var row []string
-
 		rowLen := reflect.ValueOf(r).NumField()
-
 		for i := 0; i < rowLen; i++ {
-			fName := reflect.Indirect(reflect.ValueOf(Records[0])).Type().Field(i).Name
 			val := fmt.Sprint(reflect.ValueOf(r).Field(i))
-
-			switch fName {
-			case "DelDate":
+			switch reflect.Indirect(reflect.ValueOf(Records[0])).Type().Field(i).Name {
+			case "DelDate", "Date":
 				if !r.DelDate.IsZero() {
-					val = fmt.Sprintf("%v/%v/%v", int(r.DelDate.Month()), r.DelDate.Day(), r.DelDate.Year())
-				} else {
-					val = ""
-				}
-			case "Date":
-				if !r.Date.IsZero() {
 					val = fmt.Sprintf("%v/%v/%v", int(r.DelDate.Month()), r.DelDate.Day(), r.DelDate.Year())
 				} else {
 					val = ""
