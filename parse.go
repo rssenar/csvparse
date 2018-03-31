@@ -3,6 +3,7 @@ package csvparse
 import (
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"reflect"
@@ -15,206 +16,181 @@ import (
 
 // Record represents a customer
 type Record struct {
-	Fullname   string    `json:"full_name" csv:"(?i)^[Ff]ull[Nn]ame$"`
-	Firstname  string    `json:"first_name" csv:"(?i)^[Ff]irst[Nn]ame$|^[Ff]irst [Nn]ame$"`
-	MI         string    `json:"middle_name" csv:"(?i)^mi$"`
-	Lastname   string    `json:"last_name" csv:"(?i)^[Ll]ast[Nn]ame$|^[Ll]ast [Nn]ame$"`
-	Address1   string    `json:"address_1" csv:"(?i)^[Aa]ddress1?$|^[Aa]ddress[ _-]1?$"`
-	Address2   string    `json:"address_2" csv:"(?i)^[Aa]ddress2$|^[Aa]ddress[ _-]2$"`
-	City       string    `json:"city" csv:"(?i)^[Cc]ity$"`
-	State      string    `json:"state" csv:"(?i)^[Ss]tate$|^[Ss][Tt]$"`
-	Zip        string    `json:"zip" csv:"(?i)^[Zz]ip$"`
-	Zip4       string    `json:"zip_4" csv:"(?i)^[Zz]ip4$|^4zip$"`
-	HPH        string    `json:"home_phone" csv:"(?i)^hph$"`
-	BPH        string    `json:"business_phone" csv:"(?i)^bph$"`
-	CPH        string    `json:"mobile_phone" csv:"(?i)^cph$"`
-	Email      string    `json:"email" csv:"(?i)^[Ee]mail$"`
-	VIN        string    `json:"VIN" csv:"(?i)^[Vv]in$"`
-	Year       string    `json:"year" csv:"(?i)^[Yy]ear$|^[Vv]yr$"`
-	Make       string    `json:"make" csv:"(?i)^[Mm]ake$|^[Vv]mk$"`
-	Model      string    `json:"model" csv:"(?i)^[Mm]odel$|^[Vv]md$"`
-	DelDate    time.Time `json:"delivery_date" csv:"(?i)^[Dd]eldate$"`
-	Date       time.Time `json:"last_service_date" csv:"(?i)^[Dd]ate$"`
+	Fullname   string    `json:"Full_name" csv:"(?i)^fullname$"`
+	Firstname  string    `json:"First_name" csv:"(?i)^first[ _-]?name$"`
+	MI         string    `json:"Middle_name" csv:"(?i)^mi$"`
+	Lastname   string    `json:"Last_name" csv:"(?i)^last[ _-]?name$"`
+	Address1   string    `json:"Address_1" csv:"(?i)^address[ _-]?1?$"`
+	Address2   string    `json:"Address_2" csv:"(?i)^address[ _-]?2$"`
+	City       string    `json:"City" csv:"(?i)^[Cc]ity$"`
+	State      string    `json:"State" csv:"(?i)^state$|^st$"`
+	Zip        string    `json:"Zip" csv:"(?i)^zip$"`
+	Zip4       string    `json:"Zip_4" csv:"(?i)^zip4$|^4zip$"`
+	HPH        string    `json:"Home_phone" csv:"(?i)^hph$"`
+	BPH        string    `json:"Business_phone" csv:"(?i)^bph$"`
+	CPH        string    `json:"Mobile_phone" csv:"(?i)^cph$"`
+	Email      string    `json:"Email" csv:"(?i)^email$"`
+	VIN        string    `json:"VIN" csv:"(?i)^vin$"`
+	Year       string    `json:"Year" csv:"(?i)^year$|^vyr$"`
+	Make       string    `json:"Make" csv:"(?i)^make$|^vmk$"`
+	Model      string    `json:"Model" csv:"(?i)^model$|^vmd$"`
+	DelDate    time.Time `json:"Delivery_date" csv:"(?i)^del[ ]?date[s]?$"`
+	Date       time.Time `json:"Last_service_date" csv:"(?i)^date[s]?$"`
 	DSFwalkseq string    `json:"DSF_Walk_Sequence" csv:"(?i)^DSF_WALK_SEQ$"`
-	CRRT       string    `json:"CRRT" csv:"(?i)^[Cc]rrt$"`
-	KBB        string    `json:"KBB" csv:"(?i)^KBB$"`
+	CRRT       string    `json:"CRRT" csv:"(?i)^crrt$"`
+	KBB        string    `json:"KBB" csv:"(?i)^kbb$"`
 }
 
 // CSVDecoder holds the header field map and reader
 type CSVDecoder struct {
-	header map[string]int
-	file   io.Reader
-	vflag  *bool
+	header  map[string]int
+	file    io.Reader
+	records []Record
 }
 
 // NewDecoder initializes a new parser
-func NewDecoder(input io.Reader, flag *bool) *CSVDecoder {
+func NewDecoder(input io.Reader) *CSVDecoder {
 	return &CSVDecoder{
-		header: map[string]int{},
-		file:   input,
-		vflag:  flag,
+		header:  map[string]int{},
+		file:    input,
+		records: []Record{},
 	}
 }
 
 // DecodeCSV unmarshalls CSV file to record struct
-func (d *CSVDecoder) DecodeCSV() ([]*Record, error) {
-	var Records []*Record
-
-	rdr := csv.NewReader(d.file)
-	for i := 0; ; i++ {
-		row, err := rdr.Read()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return nil, fmt.Errorf("%v : unable to parse file, csv format required", err)
-		}
-		hdrmp := make(map[string]int)
-		if i == 0 {
-			for i, v := range row {
-				if _, ok := hdrmp[v]; ok == true {
-					return nil, fmt.Errorf("%v : Duplicate header field", v)
-				}
-				hdrmp[v]++
-
-				switch {
-				case regexp.MustCompile(`(?i)^[Ff]ull[Nn]ame$`).MatchString(v):
-					d.header["fullname"] = i
-				case regexp.MustCompile(`(?i)^[Ff]irst[Nn]ame$|^[Ff]irst [Nn]ame$`).MatchString(v):
-					d.header["firstname"] = i
-				case regexp.MustCompile(`(?i)^mi$`).MatchString(v):
-					d.header["mi"] = i
-				case regexp.MustCompile(`(?i)^[Ll]ast[Nn]ame$|^[Ll]ast [Nn]ame$`).MatchString(v):
-					d.header["lastname"] = i
-				case regexp.MustCompile(`(?i)^[Aa]ddress1?$|^[Aa]ddress[ _-]1?$`).MatchString(v):
-					d.header["address1"] = i
-				case regexp.MustCompile(`(?i)^[Aa]ddress2$|^[Aa]ddress[ _-]2$`).MatchString(v):
-					d.header["address2"] = i
-				case regexp.MustCompile(`(?i)^[Cc]ity$`).MatchString(v):
-					d.header["city"] = i
-				case regexp.MustCompile(`(?i)^[Ss]tate$|^[Ss][Tt]$`).MatchString(v):
-					d.header["state"] = i
-				case regexp.MustCompile(`(?i)^[Zz]ip$`).MatchString(v):
-					d.header["zip"] = i
-				case regexp.MustCompile(`(?i)^[Zz]ip4$|^4zip$`).MatchString(v):
-					d.header["zip4"] = i
-				case regexp.MustCompile(`(?i)^hph$`).MatchString(v):
-					d.header["hph"] = i
-				case regexp.MustCompile(`(?i)^bph$`).MatchString(v):
-					d.header["bph"] = i
-				case regexp.MustCompile(`(?i)^cph$`).MatchString(v):
-					d.header["cph"] = i
-				case regexp.MustCompile(`(?i)^[Ee]mail$`).MatchString(v):
-					d.header["email"] = i
-				case regexp.MustCompile(`(?i)^[Vv]in$`).MatchString(v):
-					d.header["vin"] = i
-				case regexp.MustCompile(`(?i)^[Yy]ear$|^[Vv]yr$`).MatchString(v):
-					d.header["year"] = i
-				case regexp.MustCompile(`(?i)^[Mm]ake$|^[Vv]mk$`).MatchString(v):
-					d.header["make"] = i
-				case regexp.MustCompile(`(?i)^[Mm]odel$|^[Vv]md$`).MatchString(v):
-					d.header["model"] = i
-				case regexp.MustCompile(`(?i)^[Dd]eldate$`).MatchString(v):
-					d.header["deldate"] = i
-				case regexp.MustCompile(`(?i)^[Dd]ate$`).MatchString(v):
-					d.header["date"] = i
-				case regexp.MustCompile(`(?i)^DSF_WALK_SEQ$`).MatchString(v):
-					d.header["dsfwalkseq"] = i
-				case regexp.MustCompile(`(?i)^[Cc]rrt$`).MatchString(v):
-					d.header["crrt"] = i
-				case regexp.MustCompile(`(?i)^KBB$`).MatchString(v):
-					d.header["kbb"] = i
-				}
-			}
-
-			// Check that all required fields are present, this is inactive by defaut
-			// you can activate with command line flag -v
-			if *d.vflag {
-				reqFields := []string{"firstname", "lastname", "address1", "city", "state", "zip"}
-				for _, v := range reqFields {
-					if _, ok := d.header[v]; ok != true {
-						return nil, fmt.Errorf("Error : Missing [ %v ] - required header field", v)
-					}
-				}
-			}
-			continue
-		}
-
-		// initialize new record instance then unmarshall records
-		r := Record{}
-		for header := range d.header {
-			switch header {
-			case "fullname":
-				r.Fullname = TCase(row[d.header[header]])
-			case "firstname":
-				r.Firstname = TCase(row[d.header[header]])
-			case "mi":
-				r.MI = UCase(row[d.header[header]])
-			case "lastname":
-				r.Lastname = TCase(row[d.header[header]])
-			case "address1":
-				r.Address1 = TCase(row[d.header[header]])
-			case "address2":
-				r.Address2 = TCase(row[d.header[header]])
-			case "city":
-				r.City = TCase(row[d.header[header]])
-			case "state":
-				r.State = UCase(row[d.header[header]])
-			case "zip":
-				r.Zip = row[d.header[header]]
-			case "zip4":
-				r.Zip4 = row[d.header[header]]
-			case "hph":
-				r.HPH = FormatPhone(row[d.header[header]])
-			case "bph":
-				r.BPH = FormatPhone(row[d.header[header]])
-			case "cph":
-				r.CPH = FormatPhone(row[d.header[header]])
-			case "email":
-				r.Email = LCase(row[d.header[header]])
-			case "vin":
-				r.VIN = UCase(row[d.header[header]])
-			case "year":
-				r.Year = row[d.header[header]]
-			case "make":
-				r.Make = TCase(row[d.header[header]])
-			case "model":
-				r.Model = TCase(row[d.header[header]])
-			case "deldate":
-				r.DelDate = ParseDate(row[d.header[header]])
-			case "date":
-				r.Date = ParseDate(row[d.header[header]])
-			case "dsfwalkseq":
-				r.DSFwalkseq = StripSep(row[d.header[header]])
-			case "crrt":
-				r.CRRT = StripSep(row[d.header[header]])
-			case "kbb":
-				r.KBB = StripSep(row[d.header[header]])
-			}
-		}
-
-		// validate Fullname, First Name, Last Name & MI
-		if r.Fullname != "" && (r.Firstname == "" || r.Lastname == "") {
-			name := names.Parse(r.Fullname)
-			r.Firstname = TCase(name.FirstName)
-			r.MI = UCase(name.MiddleName)
-			r.Lastname = TCase(name.LastName)
-		} else {
-			r.Firstname = TCase(r.Firstname)
-			r.MI = UCase(r.MI)
-			r.Lastname = TCase(r.Lastname)
-		}
-
-		// parse Zip code field into Zip & Zip4
-		zip, zip4 := ParseZip(r.Zip)
-		r.Zip = zip
-		if zip4 != "" {
-			r.Zip4 = zip4
-		}
-
-		Records = append(Records, &r)
+func (d *CSVDecoder) DecodeCSV() ([]Record, error) {
+	csvRows, err := getCSVRows(d.file)
+	if err != nil {
+		return nil, err
 	}
-	return Records, nil
+	if len(csvRows) == 0 {
+		return nil, errors.New("empty csv file given")
+	}
+	headerRow := csvRows[0]
+	body := csvRows[1:]
+
+	if err := checkForDoubleHeaderNames(headerRow); err != nil {
+		return nil, err
+	}
+
+	r := Record{}
+	sValue := reflect.ValueOf(&r)
+	sLen := sValue.Elem().NumField()
+
+	for i, csvColumnHdr := range headerRow {
+		for j := 0; j < sLen; j++ {
+			if regexp.MustCompile(reflect.Indirect(sValue).Type().Field(j).Tag.Get("csv")).MatchString(csvColumnHdr) {
+				d.header[reflect.Indirect(sValue).Type().Field(j).Name] = i
+			}
+		}
+	}
+
+	for _, csvRow := range body {
+		for j := 0; j < sLen; j++ {
+			sFName := reflect.Indirect(sValue).Type().Field(j).Name
+			switch sValue.Elem().Field(j).Type() {
+			case reflect.TypeOf(""):
+				if _, ok := d.header[sFName]; ok {
+					val := reformatStringVals(sFName, csvRow[d.header[sFName]])
+					sValue.Elem().FieldByName(sFName).Set(reflect.ValueOf(val))
+				}
+			case reflect.TypeOf(time.Now()):
+				if _, ok := d.header[sFName]; ok {
+					val := ParseDate(csvRow[d.header[sFName]])
+					sValue.Elem().FieldByName(sFName).Set(reflect.ValueOf(val))
+				}
+			}
+		}
+		d.records = append(d.records, r)
+	}
+
+	// validate Fullname, First Name, Last Name & MI
+	if r.Fullname != "" && (r.Firstname == "" || r.Lastname == "") {
+		name := names.Parse(r.Fullname)
+		r.Firstname = TCase(name.FirstName)
+		r.MI = UCase(name.MiddleName)
+		r.Lastname = TCase(name.LastName)
+	} else {
+		r.Firstname = TCase(r.Firstname)
+		r.MI = UCase(r.MI)
+		r.Lastname = TCase(r.Lastname)
+	}
+
+	// parse Zip code field into Zip & Zip4
+	zip, zip4 := ParseZip(r.Zip)
+	r.Zip = zip
+	if zip4 != "" {
+		r.Zip4 = zip4
+	}
+	return d.records, nil
+}
+
+func getCSVRows(r io.Reader) ([][]string, error) {
+	rdr := csv.NewReader(r)
+	rows, err := rdr.ReadAll()
+	if err != nil {
+		return nil, fmt.Errorf("%v : unable to read file", err)
+	}
+	return rows, nil
+}
+
+func checkForDoubleHeaderNames(hdrs []string) error {
+	headerMap := make(map[string]bool, len(hdrs))
+	for _, v := range hdrs {
+		if _, ok := headerMap[v]; ok {
+			return fmt.Errorf("Repeated header name: %v", v)
+		}
+		headerMap[v] = true
+	}
+	return nil
+}
+
+func reformatStringVals(sname, val string) string {
+	switch sname {
+	case "Fullname":
+		return TCase(val)
+	case "Firstname":
+		return TCase(val)
+	case "MI":
+		return UCase(val)
+	case "Lastname":
+		return TCase(val)
+	case "Address1":
+		return TCase(val)
+	case "Address2":
+		return TCase(val)
+	case "City":
+		return TCase(val)
+	case "State":
+		return UCase(val)
+	case "Zip":
+		return UCase(val)
+	case "Zip4":
+		return UCase(val)
+	case "HPH":
+		return FormatPhone(val)
+	case "BPH":
+		return FormatPhone(val)
+	case "CPH":
+		return FormatPhone(val)
+	case "Email":
+		return LCase(val)
+	case "VIN":
+		return UCase(val)
+	case "Year":
+		return UCase(val)
+	case "Make":
+		return TCase(val)
+	case "Model":
+		return TCase(val)
+	case "DSFwalkseq":
+		return StripSep(val)
+	case "CRRT":
+		return StripSep(val)
+	case "KBB":
+		return UCase(val)
+	}
+	return val
 }
 
 // CSVEncoder outputs JSON values to an output stream.
@@ -228,72 +204,45 @@ func NewEncoder(output io.Writer) *CSVEncoder {
 }
 
 // EncodeCSV marshalls the Record struct then outputs to csv
-func (e *CSVEncoder) EncodeCSV(Records []*Record, outfields []string) error {
-
+func (e *CSVEncoder) EncodeCSV(Records []Record) error {
 	wtr := csv.NewWriter(e.output)
 
 	var header []string
-	headerLen := reflect.ValueOf(Records[0]).Elem().NumField()
+	headerLen := reflect.ValueOf(&Records[0]).Elem().NumField()
+
 	for i := 0; i < headerLen; i++ {
-		headerName := reflect.Indirect(reflect.ValueOf(Records[i])).Type().Field(i).Name
-		if outfields == nil {
-			header = append(header, headerName)
-		} else {
-			for _, o := range outfields {
-				if o == headerName {
-					header = append(header, headerName)
-				}
-			}
-		}
+		headerName := reflect.Indirect(reflect.ValueOf(&Records[0])).Type().Field(i).Name
+		header = append(header, headerName)
 	}
+
 	if err := wtr.Write(header); err != nil {
 		return fmt.Errorf("error writing header to csv: %v", err)
 	}
 
 	for _, r := range Records {
 		var row []string
-		rowLen := reflect.ValueOf(r).Elem().NumField()
-		for i := 0; i < rowLen; i++ {
-			name := reflect.Indirect(reflect.ValueOf(Records[i])).Type().Field(i).Name
-			val := fmt.Sprint(reflect.ValueOf(r).Elem().Field(i))
 
-			if outfields == nil {
-				switch name {
-				case "DelDate":
-					if !r.DelDate.IsZero() {
-						val = fmt.Sprintf("%v/%v/%v", int(r.DelDate.Month()), r.DelDate.Day(), r.DelDate.Year())
-					} else {
-						val = ""
-					}
-				case "Date":
-					if !r.Date.IsZero() {
-						val = fmt.Sprintf("%v/%v/%v", int(r.DelDate.Month()), r.DelDate.Day(), r.DelDate.Year())
-					} else {
-						val = ""
-					}
+		rowLen := reflect.ValueOf(r).NumField()
+
+		for i := 0; i < rowLen; i++ {
+			fName := reflect.Indirect(reflect.ValueOf(Records[0])).Type().Field(i).Name
+			val := fmt.Sprint(reflect.ValueOf(r).Field(i))
+
+			switch fName {
+			case "DelDate":
+				if !r.DelDate.IsZero() {
+					val = fmt.Sprintf("%v/%v/%v", int(r.DelDate.Month()), r.DelDate.Day(), r.DelDate.Year())
+				} else {
+					val = ""
 				}
-				row = append(row, val)
-			} else {
-				for _, o := range outfields {
-					if o == name {
-						switch name {
-						case "DelDate":
-							if !r.DelDate.IsZero() {
-								val = fmt.Sprintf("%v/%v/%v", int(r.DelDate.Month()), r.DelDate.Day(), r.DelDate.Year())
-							} else {
-								val = ""
-							}
-						case "Date":
-							if !r.Date.IsZero() {
-								val = fmt.Sprintf("%v/%v/%v", int(r.DelDate.Month()), r.DelDate.Day(), r.DelDate.Year())
-							} else {
-								val = ""
-							}
-						}
-						row = append(row, val)
-					}
+			case "Date":
+				if !r.Date.IsZero() {
+					val = fmt.Sprintf("%v/%v/%v", int(r.DelDate.Month()), r.DelDate.Day(), r.DelDate.Year())
+				} else {
+					val = ""
 				}
 			}
+			row = append(row, val)
 		}
 		if err := wtr.Write(row); err != nil {
 			return fmt.Errorf("error writing row to csv: %v", err)
@@ -307,7 +256,7 @@ func (e *CSVEncoder) EncodeCSV(Records []*Record, outfields []string) error {
 }
 
 // EncodeJSON marshalls the Record struct then outputs to Indented JSON
-func (e *CSVEncoder) EncodeJSON(Records []*Record) error {
+func (e *CSVEncoder) EncodeJSON(Records []Record) error {
 	data, err := json.MarshalIndent(Records, " ", " ")
 	if err != nil {
 		return fmt.Errorf("error encoding to JSON output: %v", err)
