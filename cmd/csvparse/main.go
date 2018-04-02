@@ -21,6 +21,7 @@ type record struct {
 	State      string    `json:"State" csv:"(?i)^state$|^st$" fmt:"uc"`
 	Zip        string    `json:"Zip" csv:"(?i)^(zip|postal)[ _]?(code)?$" fmt:"uc"`
 	Zip4       string    `json:"Zip_4" csv:"(?i)^zip4$|^4zip$" fmt:"uc"`
+	CRRT       string    `json:"CRRT" csv:"(?i)^crrt$" fmt:"uc"`
 	HPH        string    `json:"Home_phone" csv:"(?i)^hph$|^home[ _]phone$" fmt:"fp"`
 	BPH        string    `json:"Business_phone" csv:"(?i)^bph$|^(work|business)[ _]phone$" fmt:"fp"`
 	CPH        string    `json:"Mobile_phone" csv:"(?i)^cph$|^mobile[ _]phone$" fmt:"fp"`
@@ -32,7 +33,6 @@ type record struct {
 	DelDate    time.Time `json:"Delivery_date" csv:"(?i)^del[ ]?date$" fmt:"-"`
 	Date       time.Time `json:"Last_service_date" csv:"(?i)^date$" fmt:"-"`
 	DSFwalkseq string    `json:"DSF_Walk_Sequence" csv:"(?i)^DSF_WALK_SEQ$" fmt:"uc"`
-	CRRT       string    `json:"CRRT" csv:"(?i)^crrt$" fmt:"uc"`
 	KBB        string    `json:"KBB" csv:"(?i)^kbb$" fmt:"uc"`
 }
 
@@ -80,8 +80,11 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	for _, z := range x {
-		fmt.Println(z)
+
+	err = csvparse.NewEncoder(os.Stdout).EncodeJSON(x)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	// if *j {

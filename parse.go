@@ -2,6 +2,7 @@ package csvparse
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -17,7 +18,6 @@ import (
 type CSVDecoder struct {
 	header map[string]int
 	file   io.Reader
-	// records []Record
 }
 
 // NewDecoder initializes a new parser
@@ -25,7 +25,6 @@ func NewDecoder(input io.Reader) *CSVDecoder {
 	return &CSVDecoder{
 		header: map[string]int{},
 		file:   input,
-		// records: []Record{},
 	}
 }
 
@@ -56,6 +55,7 @@ func (d *CSVDecoder) DecodeCSV(v interface{}) error {
 
 	innerValueHdr := reflect.New(innerType)
 	innerValueHdrLen := innerValueHdr.Elem().NumField()
+
 	for i, csvColumnHdr := range headerRow {
 		for j := 0; j < innerValueHdrLen; j++ {
 			regex := reflect.Indirect(innerValueHdr).Type().Field(j).Tag.Get("csv")
@@ -68,6 +68,7 @@ func (d *CSVDecoder) DecodeCSV(v interface{}) error {
 	for _, csvRow := range body {
 		innerValueRow := reflect.New(innerType)
 		innerValueRowLen := innerValueRow.Elem().NumField()
+
 		for j := 0; j < innerValueRowLen; j++ {
 			sFName := reflect.Indirect(innerValueRow).Type().Field(j).Name
 			switch innerValueRow.Elem().Type().Field(j).Type {
@@ -171,15 +172,15 @@ func formatStringVals(name, format, val string) string {
 	return val
 }
 
-// // CSVEncoder outputs JSON values to an output stream.
-// type CSVEncoder struct {
-// 	output io.Writer
-// }
+// CSVEncoder outputs JSON values to an output stream.
+type CSVEncoder struct {
+	output io.Writer
+}
 
-// // NewEncoder initializes a new parser
-// func NewEncoder(output io.Writer) *CSVEncoder {
-// 	return &CSVEncoder{output: output}
-// }
+// NewEncoder initializes a new parser
+func NewEncoder(output io.Writer) *CSVEncoder {
+	return &CSVEncoder{output: output}
+}
 
 // // EncodeCSV marshalls the Record struct then outputs to csv
 // func (e *CSVEncoder) EncodeCSV(Records []Record) error {
@@ -223,15 +224,15 @@ func formatStringVals(name, format, val string) string {
 // 	return nil
 // }
 
-// // EncodeJSON marshalls the Record struct then outputs to Indented JSON
-// func (e *CSVEncoder) EncodeJSON(Records []Record) error {
-// 	data, err := json.MarshalIndent(Records, " ", " ")
-// 	if err != nil {
-// 		return fmt.Errorf("error encoding to JSON output: %v", err)
-// 	}
-// 	fmt.Fprintln(e.output, string(data))
-// 	return nil
-// }
+// EncodeJSON marshalls the Record struct then outputs to Indented JSON
+func (e *CSVEncoder) EncodeJSON(v interface{}) error {
+	data, err := json.MarshalIndent(v, " ", " ")
+	if err != nil {
+		return fmt.Errorf("error encoding to JSON output: %v", err)
+	}
+	fmt.Fprintln(e.output, string(data))
+	return nil
+}
 
 // TCase transforms string to title case and trims leading & trailing white space
 func TCase(f string) string {
