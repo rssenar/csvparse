@@ -81,7 +81,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = csvparse.NewEncoder(os.Stdout).EncodeJSON(x)
+	// err = csvparse.NewEncoder(os.Stdout).EncodeJSON(x)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// 	os.Exit(1)
+	// }
+
+	err = csvparse.NewEncoder(os.Stdout).EncodeCSV(x)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
