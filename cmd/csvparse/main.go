@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"time"
 
@@ -37,7 +38,8 @@ type record struct {
 }
 
 func main() {
-	// var j = flag.Bool("j", false, "Enable output to Indented JSON")
+	defer timeTrack(time.Now(), "csvparse")
+	var j = flag.Bool("j", false, "Enable output to Indented JSON")
 	flag.Parse()
 
 	var input io.Reader
@@ -73,41 +75,30 @@ func main() {
 	}
 
 	// Pass in black []*Record{} container to be filled
-	x := []*record{}
+	data := []*record{}
 
-	err := csvparse.NewDecoder(input).DecodeCSV(&x)
+	err := csvparse.NewDecoder(input).DecodeCSV(&data)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-
-	// err = csvparse.NewEncoder(os.Stdout).EncodeJSON(x)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	os.Exit(1)
-	// }
-
-	err = csvparse.NewEncoder(os.Stdout).EncodeCSV(x)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+	switch {
+	case *j:
+		err = csvparse.NewEncoder(os.Stdout).EncodeJSON(data)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	default:
+		err = csvparse.NewEncoder(os.Stdout).EncodeCSV(data)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
+}
 
-	// if *j {
-	// 	// MarshalIndent outputs []*Record to JSON for output to os.Stdout
-	// 	// []*Record are stored in the *Parser.Records struct filed
-	// 	err := csvparse.NewEncoder(os.Stdout).EncodeJSON(data)
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 		os.Exit(1)
-	// 	}
-	// } else {
-	// 	// MarshaltoCSV marshals []*Record to []string for output to os.Stdout
-	// 	// []*Record are stored in the *Parser.Records struct filed
-	// 	err = csvparse.NewEncoder(os.Stdout).EncodeCSV(data)
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 		os.Exit(1)
-	// 	}
-	// }
+func timeTrack(start time.Time, name string) {
+	elapsed := time.Since(start)
+	log.Printf("%s took %s", name, elapsed)
 }
