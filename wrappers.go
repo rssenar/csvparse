@@ -12,7 +12,8 @@ import (
 	"time"
 )
 
-func getCSVRows(r io.Reader) ([][]string, error) {
+// GetCSVRows get [][]strins from io.reader
+func GetCSVRows(r io.Reader) ([][]string, error) {
 	rdr := csv.NewReader(r)
 	rows, err := rdr.ReadAll()
 	if err != nil {
@@ -21,7 +22,8 @@ func getCSVRows(r io.Reader) ([][]string, error) {
 	return rows, nil
 }
 
-func getInnerSliceType(v interface{}) reflect.Type {
+// GetInnerSliceType gets inner slice tyoe with reflect and return non-pointer value
+func GetInnerSliceType(v interface{}) reflect.Type {
 	outType := reflect.TypeOf(v)
 	if outType.Kind() == reflect.Ptr {
 		outType = outType.Elem()
@@ -33,7 +35,8 @@ func getInnerSliceType(v interface{}) reflect.Type {
 	return inType
 }
 
-func checkifSlice(v interface{}) reflect.Value {
+// CheckInterfaceValue get interface tyoe with reflect and return non-pointer value
+func CheckInterfaceValue(v interface{}) reflect.Value {
 	value := reflect.ValueOf(v)
 	if value.Kind() == reflect.Ptr {
 		value = value.Elem()
@@ -41,7 +44,9 @@ func checkifSlice(v interface{}) reflect.Value {
 	return value
 }
 
-func checkForDoubleHeaderNames(hdrs []string) error {
+// CheckForDoubleHeaderNames checks for duplicate header fields
+// returns error if dupes found
+func CheckForDoubleHeaderNames(hdrs []string) error {
 	headerMap := make(map[string]bool, len(hdrs))
 	for _, v := range hdrs {
 		if _, ok := headerMap[v]; ok {
@@ -52,7 +57,9 @@ func checkForDoubleHeaderNames(hdrs []string) error {
 	return nil
 }
 
-func formatStringVals(format, val string) (string, error) {
+// FormatStringVals applies formating to string
+// based on "fmt" struct tag
+func FormatStringVals(format, val string) (string, error) {
 	switch format {
 	case "tc":
 		return TCase(val), nil

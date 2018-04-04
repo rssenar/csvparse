@@ -25,11 +25,11 @@ func (e *CSVEncoder) EncodeCSV(v interface{}) error {
 	defer timeTrack(time.Now(), "EncodeCSV Func")
 	wtr := csv.NewWriter(e.output)
 
-	slice := checkifSlice(v)
+	slice := CheckInterfaceValue(v)
 	if slice.Kind() != reflect.Slice {
 		return errors.New("Need to pass in a slice")
 	}
-	innerType := getInnerSliceType(v)
+	innerType := GetInnerSliceType(v)
 	if innerType.Kind() != reflect.Struct {
 		return errors.New("Need to pass in a slice of stucts")
 	}
@@ -48,7 +48,16 @@ func (e *CSVEncoder) EncodeCSV(v interface{}) error {
 		var row []string
 		for j := 0; j < innerType.NumField(); j++ {
 			name := reflect.Indirect(innerValue).Type().Field(j).Name
-			row = append(row, innerValue.FieldByName(name).String())
+			switch innerValue.Field(j).Type() {
+			case reflect.TypeOf(time.Now()):
+				time := fmt.Sprint(innerValue.FieldByName(name))[:10]
+				if time == "0001-01-01" {
+					time = ""
+				}
+				row = append(row, time)
+			default:
+				row = append(row, innerValue.FieldByName(name).String())
+			}
 		}
 		if err := wtr.Write(row); err != nil {
 			return fmt.Errorf("error writing row: %v", err)
