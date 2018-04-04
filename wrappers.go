@@ -2,6 +2,7 @@ package csvparse
 
 import (
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -51,20 +52,21 @@ func checkForDoubleHeaderNames(hdrs []string) error {
 	return nil
 }
 
-func formatStringVals(name, format, val string) string {
+func formatStringVals(format, val string) (string, error) {
 	switch format {
 	case "tc":
-		return TCase(val)
+		return TCase(val), nil
 	case "uc":
-		return UCase(val)
+		return UCase(val), nil
 	case "lc":
-		return LCase(val)
+		return LCase(val), nil
 	case "fp":
-		return FormatPhone(val)
+		return FormatPhone(val), nil
 	case "ss":
-		return StripSep(val)
+		return StripSep(val), nil
+	default:
+		return "", errors.New("Invalid string format: use [tc, uc, lc, fp, ss]")
 	}
-	return val
 }
 
 // TCase transforms string to title case and trims leading & trailing white space

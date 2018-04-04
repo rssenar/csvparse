@@ -2,6 +2,7 @@ package csvparse
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"reflect"
 	"regexp"
@@ -71,9 +72,22 @@ func (d *CSVDecoder) DecodeCSV(v interface{}) error {
 			switch innerValueRow.Elem().Type().Field(j).Type {
 			case reflect.TypeOf(""):
 				if _, ok := d.header[sFName]; ok {
-					format := reflect.Indirect(innerValueRow).Type().Field(j).Tag.Get("fmt")
-					val := formatStringVals(sFName, format, csvRow[d.header[sFName]])
-					innerValueRow.Elem().FieldByName(sFName).Set(reflect.ValueOf(val))
+					if format, ok := reflect.Indirect(innerValueRow).Type().Field(j).Tag.Lookup("fmt"); ok {
+						fmt.Println("format", format)
+						if format != "-" {
+							val, err := formatStringVals(format, csvRow[d.header[sFName]])
+							if err != nil {
+								return err
+							}
+							innerValueRow.Elem().FieldByName(sFName).Set(reflect.ValueOf(val))
+						} else {
+							val := csvRow[d.header[sFName]]
+							innerValueRow.Elem().FieldByName(sFName).Set(reflect.ValueOf(val))
+						}
+					} else {
+						val := csvRow[d.header[sFName]]
+						innerValueRow.Elem().FieldByName(sFName).Set(reflect.ValueOf(val))
+					}
 				}
 			case reflect.TypeOf(time.Now()):
 				if _, ok := d.header[sFName]; ok {

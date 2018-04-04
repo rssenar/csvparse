@@ -84,13 +84,13 @@ func main() {
 	}
 	switch {
 	case *j:
-		err = csvparse.NewEncoder(os.Stdout).EncodeJSON(data)
+		err = csvparse.NewEncoder(os.Stdout).EncodeJSON(&data)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 	default:
-		err = csvparse.NewEncoder(os.Stdout).EncodeCSV(data)
+		err = csvparse.NewEncoder(os.Stdout).EncodeCSV(&data)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
