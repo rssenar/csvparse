@@ -25,7 +25,7 @@ func NewDecoder(input io.Reader) *CSVDecoder {
 // DecodeCSV unmarshalls CSV file to a specified struct type
 func (d *CSVDecoder) DecodeCSV(v interface{}) error {
 	// Optional timer function for determining function duration
-	// defer timeTrack(time.Now(), "Unmarshalls CSV file")
+	// defer timeTrack(time.Now(), "DecodeCSVtoStruct")
 
 	// getCSVRows grabs [][]strings from spcified input
 	csvRows, err := GetCSVRows(d.file)

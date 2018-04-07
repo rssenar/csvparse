@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -16,32 +17,23 @@ import (
 )
 
 type client struct {
-	Fullname   string    `json:"Full_name" csv:"(?i)^fullname$" fmt:"tc"`
-	Firstname  string    `json:"First_name" csv:"(?i)^first[ _-]?name$" fmt:"tc"`
-	MI         string    `json:"Middle_name" csv:"(?i)^mi$" fmt:"uc"`
-	Lastname   string    `json:"Last_name" csv:"(?i)^last[ _-]?name$" fmt:"tc"`
-	Address1   string    `json:"Address_1" csv:"(?i)^address[ _-]?1?$" fmt:"tc"`
-	Address2   string    `json:"Address_2" csv:"(?i)^address[ _-]?2$" fmt:"tc"`
-	City       string    `json:"City" csv:"(?i)^city$" fmt:"tc"`
-	State      string    `json:"State" csv:"(?i)^state$|^st$" fmt:"uc"`
-	Zip        string    `json:"Zip" csv:"(?i)^(zip|postal)[ _]?(code)?$" fmt:"-"`
-	Zip4       string    `json:"Zip_4" csv:"(?i)^zip4$|^4zip$" fmt:"-"`
-	CRRT       string    `json:"CRRT" csv:"(?i)^crrt$" fmt:"uc"`
-	DSFwalkseq string    `json:"DSF_Walk_Sequence" csv:"(?i)^DSF_WALK_SEQ$" fmt:"uc"`
-	HPH        string    `json:"Home_phone" csv:"(?i)^hph$|^home[ _]phone$" fmt:"fp"`
-	BPH        string    `json:"Business_phone" csv:"(?i)^bph$|^(work|business)[ _]phone$" fmt:"fp"`
-	CPH        string    `json:"Mobile_phone" csv:"(?i)^cph$|^mobile[ _]phone$" fmt:"fp"`
-	Email      string    `json:"Email" csv:"(?i)^email[ _]?(address)?$" fmt:"lc"`
-	VIN        string    `json:"VIN" csv:"(?i)^vin$" fmt:"uc"`
-	Year       string    `json:"Veh_Year" csv:"(?i)^year$|^vyr$" fmt:"-"`
-	Make       string    `json:"Veh_Make" csv:"(?i)^make$|^vmk$" fmt:"tc"`
-	Model      string    `json:"Veh_Model" csv:"(?i)^model$|^vmd$" fmt:"tc"`
-	DelDate    time.Time `json:"Delivery_date" csv:"(?i)^del[ ]?date$" fmt:"-"`
-	Date       time.Time `json:"Last_service_date" csv:"(?i)^date$" fmt:"-"`
+	Fullname  string    `json:"Full_name" csv:"(?i)^fullname$" fmt:"tc"`
+	Firstname string    `json:"First_name" csv:"(?i)^first[ _-]?name$" fmt:"tc"`
+	MI        string    `json:"Middle_name" csv:"(?i)^mi$" fmt:"uc"`
+	Lastname  string    `json:"Last_name" csv:"(?i)^last[ _-]?name$" fmt:"tc"`
+	Address1  string    `json:"Address_1" csv:"(?i)^address[ _-]?1?$" fmt:"tc"`
+	Address2  string    `json:"Address_2" csv:"(?i)^address[ _-]?2$" fmt:"tc"`
+	City      string    `json:"City" csv:"(?i)^city$" fmt:"tc"`
+	State     string    `json:"State" csv:"(?i)^state$|^st$" fmt:"uc"`
+	Zip       string    `json:"Zip" csv:"(?i)^(zip|postal)[ _]?(code)?$" fmt:"-"`
+	Zip4      string    `json:"Zip_4" csv:"(?i)^zip4$|^4zip$" fmt:"-"`
+	HPH       string    `json:"Home_phone" csv:"(?i)^hph$|^home[ _]phone$" fmt:"fp"`
+	Email     string    `json:"Email" csv:"(?i)^email[ _]?(address)?$" fmt:"lc"`
+	Date      time.Time `json:"Last_service_date" csv:"(?i)^date$" fmt:"-"`
 }
 
 func main() {
-	defer timeTrack(time.Now(), "CSVParser")
+	// defer timeTrack(time.Now(), "CSVParser")
 	flag.Parse()
 	args := flag.Args()
 
@@ -69,10 +61,13 @@ func main() {
 		input = os.Stdin
 	}
 
-	// Pass in black []*Record{} container to be filled
+	// Pass in blank []*Record{} container to be filled
 	data := []*client{}
-
-	err := cp.NewDecoder(input).DecodeCSV(&data)
+	var err error
+	err = cp.NewDecoder(input).DecodeCSV(&data)
+	// err = newEncoder(os.Stdout).encodeCSV(data, 1000)
+	jdata, err := json.MarshalIndent(data, " ", " ")
+	fmt.Println(string(jdata))
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -84,8 +79,8 @@ type csvEncoder struct{ output io.Writer }
 func newEncoder(output io.Writer) *csvEncoder { return &csvEncoder{output: output} }
 
 // EncodeCSV marshalls the Record struct then outputs to csv
-func (e *csvEncoder) encodeCSV(data []*client, concurency *int) error {
-	defer timeTrack(time.Now(), "encodeCSV")
+func (e *csvEncoder) encodeCSV(data []*client, concurency int) error {
+	// defer timeTrack(time.Now(), "EncodeStructtoCSV")
 
 	var Client *client
 
@@ -100,18 +95,18 @@ func (e *csvEncoder) encodeCSV(data []*client, concurency *int) error {
 	results := make(chan []string)
 	var wg sync.WaitGroup
 
-	wg.Add(*concurency)
+	wg.Add(concurency)
 
 	go func() {
 		wg.Wait()
 		close(results)
 	}()
 
-	for i := 0; i < *concurency; i++ {
+	for i := 0; i < concurency; i++ {
 		go func() {
 			defer wg.Done()
 			for t := range tasks {
-				r, err := formatStructFields(t)
+				r, err := process(t)
 				if err != nil {
 					log.Println(err)
 					continue
@@ -120,38 +115,13 @@ func (e *csvEncoder) encodeCSV(data []*client, concurency *int) error {
 			}
 		}()
 	}
-	if err := outputCSV(e.output, results, Client); err != nil {
+	if err := print(e.output, results, Client); err != nil {
 		log.Printf("could not write to %s: %v", e.output, err)
 	}
 	return nil
 }
 
-func outputCSV(output io.Writer, records <-chan []string, c *client) error {
-	w := csv.NewWriter(output)
-
-	var header []string
-	sValue := reflect.ValueOf(c).Elem()
-	for i := 0; i < sValue.NumField(); i++ {
-		name := reflect.Indirect(sValue).Type().Field(i).Name
-		header = append(header, name)
-	}
-	if err := w.Write(header); err != nil {
-		log.Fatalf("could not write header to csv: %v", err)
-	}
-
-	for r := range records {
-		if err := w.Write(r); err != nil {
-			log.Fatalf("could not write record to csv: %v", err)
-		}
-	}
-	w.Flush()
-	if err := w.Error(); err != nil {
-		return fmt.Errorf("writer failed: %v", err)
-	}
-	return nil
-}
-
-func formatStructFields(t *client) ([]string, error) {
+func process(t *client) ([]string, error) {
 	if t.Fullname != "" && (t.Firstname == "" || t.Lastname == "") {
 		name := names.Parse(t.Fullname)
 		t.Firstname = name.FirstName
@@ -197,6 +167,31 @@ func formatStructFields(t *client) ([]string, error) {
 		row = append(row, value)
 	}
 	return row, nil
+}
+
+func print(output io.Writer, records <-chan []string, c *client) error {
+	w := csv.NewWriter(output)
+
+	var header []string
+	sValue := reflect.ValueOf(c).Elem()
+	for i := 0; i < sValue.NumField(); i++ {
+		name := reflect.Indirect(sValue).Type().Field(i).Name
+		header = append(header, name)
+	}
+	if err := w.Write(header); err != nil {
+		log.Fatalf("could not write header to csv: %v", err)
+	}
+
+	for r := range records {
+		if err := w.Write(r); err != nil {
+			log.Fatalf("could not write record to csv: %v", err)
+		}
+	}
+	w.Flush()
+	if err := w.Error(); err != nil {
+		return fmt.Errorf("writer failed: %v", err)
+	}
+	return nil
 }
 
 func timeTrack(start time.Time, name string) {
