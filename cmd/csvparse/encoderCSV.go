@@ -24,12 +24,15 @@ func newEncoder(output io.Writer) *csvEncoder {
 
 // EncodeCSV marshalls the Record struct then outputs to csv
 func (e *csvEncoder) encodeCSV(data []*client, concurency *int) error {
-	defer timeTrack(time.Now(), "encodeCSV")
+	// Optional timer function for determining function duration
+	// defer timeTrack(time.Now(), "encodeCSV")
+
+	var Client *client
 
 	tasks := make(chan *client)
 	go func() {
-		for _, client := range data {
-			tasks <- client
+		for _, Client = range data {
+			tasks <- Client
 		}
 		close(tasks)
 	}()
@@ -56,14 +59,25 @@ func (e *csvEncoder) encodeCSV(data []*client, concurency *int) error {
 			}
 		}()
 	}
-	if err := outputCSV(e.output, results); err != nil {
+	if err := outputCSV(e.output, results, Client); err != nil {
 		log.Printf("could not write to %s: %v", e.output, err)
 	}
 	return nil
 }
 
-func outputCSV(output io.Writer, records <-chan []string) error {
+func outputCSV(output io.Writer, records <-chan []string, c *client) error {
 	w := csv.NewWriter(output)
+
+	var header []string
+	sValue := reflect.ValueOf(c).Elem()
+	for i := 0; i < sValue.NumField(); i++ {
+		name := reflect.Indirect(sValue).Type().Field(i).Name
+		header = append(header, name)
+	}
+	if err := w.Write(header); err != nil {
+		log.Fatalf("could not write header to csv: %v", err)
+	}
+
 	for r := range records {
 		if err := w.Write(r); err != nil {
 			log.Fatalf("could not write record to csv: %v", err)
@@ -90,6 +104,7 @@ func formatStructFields(t *client) ([]string, error) {
 			t.Zip4 = zip4
 		}
 	}
+
 	var row []string
 	sValue := reflect.ValueOf(t).Elem()
 	for i := 0; i < sValue.NumField(); i++ {

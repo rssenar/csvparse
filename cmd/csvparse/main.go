@@ -36,15 +36,9 @@ type client struct {
 }
 
 func main() {
-	// Optional timer function for determining function duration
-	defer timeTrack(time.Now(), "Application")
-	// Set CLI flags
-	var j = flag.Bool("j", false, "Enable output to Indented JSON")
-	var concurency = flag.Int("c", 100, "Set number of GoRoutines")
 	flag.Parse()
 
 	var input io.Reader
-	// return the non-flag command-line arguments
 	args := flag.Args()
 
 	if len(args) != 0 {
@@ -77,21 +71,4 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	switch {
-	case *j:
-		err = csvparse.NewEncoder(os.Stdout).EncodeJSON(data)
-		if err != nil {
-			log.Fatalln(err)
-		}
-	default:
-		err = newEncoder(os.Stdout).encodeCSV(data, concurency)
-		if err != nil {
-			log.Println(err)
-		}
-	}
-}
-
-func timeTrack(start time.Time, name string) {
-	elapsed := time.Since(start)
-	log.Printf("%s took %s", name, elapsed)
 }

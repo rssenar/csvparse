@@ -1,3 +1,111 @@
-# csvparse
-
+csvparse
+=====
 Command line tool for parsing csv documents
+
+csvparse is a simple package that unmarshals a CSV file into the provided struct object
+
+It is also capable of parsing a regex string for more robust field header matching
+
+API and techniques inspired from https://github.com/gocarina/gocsv
+
+Installation
+=====
+
+```go get -u github.com/rssenar/csvparse```
+
+Example
+=====
+
+Sample CSV file
+
+```csv
+
+client_id,client_name,client_age
+1,Jose,42
+2,Daniel,26
+3,Vincent,32
+
+```
+
+Easy binding in Go!
+---
+
+```go
+
+package main
+
+import (
+	"flag"
+	"io"
+	"log"
+	"os"
+	"time"
+
+	"github.com/rssenar/csvparse"
+)
+
+type client struct {
+	Fullname   string    `json:"Full_name" csv:"(?i)^fullname$" fmt:"tc"`
+	Firstname  string    `json:"First_name" csv:"(?i)^first[ _-]?name$" fmt:"tc"`
+	MI         string    `json:"Middle_name" csv:"(?i)^mi$" fmt:"uc"`
+	Lastname   string    `json:"Last_name" csv:"(?i)^last[ _-]?name$" fmt:"tc"`
+	Address1   string    `json:"Address_1" csv:"(?i)^address[ _-]?1?$" fmt:"tc"`
+	Address2   string    `json:"Address_2" csv:"(?i)^address[ _-]?2$" fmt:"tc"`
+	City       string    `json:"City" csv:"(?i)^city$" fmt:"tc"`
+	State      string    `json:"State" csv:"(?i)^state$|^st$" fmt:"uc"`
+	Zip        string    `json:"Zip" csv:"(?i)^(zip|postal)[ _]?(code)?$" fmt:"-"`
+	Zip4       string    `json:"Zip_4" csv:"(?i)^zip4$|^4zip$" fmt:"-"`
+	CRRT       string    `json:"CRRT" csv:"(?i)^crrt$" fmt:"uc"`
+	DSFwalkseq string    `json:"DSF_Walk_Sequence" csv:"(?i)^DSF_WALK_SEQ$" fmt:"uc"`
+	HPH        string    `json:"Home_phone" csv:"(?i)^hph$|^home[ _]phone$" fmt:"fp"`
+	BPH        string    `json:"Business_phone" csv:"(?i)^bph$|^(work|business)[ _]phone$" fmt:"fp"`
+	CPH        string    `json:"Mobile_phone" csv:"(?i)^cph$|^mobile[ _]phone$" fmt:"fp"`
+	Email      string    `json:"Email" csv:"(?i)^email[ _]?(address)?$" fmt:"lc"`
+	VIN        string    `json:"VIN" csv:"(?i)^vin$" fmt:"uc"`
+	Year       string    `json:"Veh_Year" csv:"(?i)^year$|^vyr$" fmt:"-"`
+	Make       string    `json:"Veh_Make" csv:"(?i)^make$|^vmk$" fmt:"tc"`
+	Model      string    `json:"Veh_Model" csv:"(?i)^model$|^vmd$" fmt:"tc"`
+	DelDate    time.Time `json:"Delivery_date" csv:"(?i)^del[ ]?date$" fmt:"-"`
+	Date       time.Time `json:"Last_service_date" csv:"(?i)^date$" fmt:"-"`
+}
+
+func main() {
+	flag.Parse()
+
+	var input io.Reader
+	args := flag.Args()
+
+	if len(args) != 0 {
+		// verify if file was passed through as a command-line argument
+		if len(args) > 1 {
+			log.Fatalln("Error: Cannot parse multiple files")
+		}
+		file, err := os.Open(args[0])
+		defer file.Close()
+		if err != nil {
+			log.Fatalf("%v : No such file or directory\n", args[0])
+		}
+		input = file
+	} else {
+		// verify if file was passed through from os.Stdin
+		fi, err := os.Stdin.Stat()
+		if err != nil {
+			log.Fatalf("%v : Error reading stdin file info\n", err)
+		}
+		if fi.Size() == 0 {
+			log.Fatalf("Input file not specified")
+		}
+		input = os.Stdin
+	}
+
+	// Pass in black []*Record{} container to be filled
+	data := []*client{}
+
+	err := csvparse.NewDecoder(input).DecodeCSV(&data)
+	if err != nil {
+		log.Fatalln(err)
+	}
+}
+
+
+```
