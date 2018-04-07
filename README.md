@@ -6,17 +6,17 @@ A simple package for parsing csv files into structs. The API and techniques insp
 
 ```go get -u github.com/rssenar/csvparse```
 
-## Usage:
+### Sample:
 
 Give this simple yet common CSV dataset...
 
 ```
-Company,First Name,Last Name,City,State,Postal Code,Email Address,Insert Date,2 sel
-,Michael,Chartan,Great Neck,NY  ,11024,MICHAELCHARTAN@GMAIL.COM,9/16/17 9:26,A
-,Ira,kolin,MELVILLE,NY  ,11747,Daddy.kolin@gmail.com,9/16/17 10:36,B
+FIRSTNAME,LASTNAME,ADDRESS_1,CITY,STATE,ZIP,CRRT,DP2,DPC,LOT,LOT_ORD,HPH,CPH,EMAIL,LICENSE,VIN,VYR,VMK,VMD,VML,DIS,ROAMT,DELDATE,IBFLAG,MAIL,TYPE,BPH,CNO,NU,APR,TERM,DATE,SQN,INC
+Toby,Avdeef,1000 KELLEY DR,FORT WORTH,TX,76140-3618,C003,0,0,,,,682-227-5578,,,4A3AK24F67E006257,2007,MITSUBISHI,ECLIPSE,,0,,,,,,,,,,,7/10/15,343820,2
+Natalie,Jackson,10000 IRON RIDGE DR,FORT WORTH,TX,76140-7527,R040,0,0,,,8175681080,,,,1C3EL46X04N213746,2004,CHRYSLER,SEBRING,,0,,12/31/03,,,,,,,,,10/14/10,343821,2
 
 ```
-Given this struct...
+And given this struct...
 
 ```
 type client struct {
@@ -36,7 +36,7 @@ type client struct {
 }
 ```
 
-The desired output will be...
+The output will be...
 
 ```
 [
@@ -72,3 +72,10 @@ The desired output will be...
   }
  ]
 ```
+
+### Usage:
+
+The behaviour is dicatated by the struct tags
+
+You can specify how the CSV header row matches the struct field by include a `csv:"(?i)^fullname$" fmt:"tc"`
+
