@@ -16,20 +16,6 @@ Installation
 Example
 =====
 
-Sample CSV file
-
-```csv
-
-client_id,client_name,client_age
-1,Jose,42
-2,Daniel,26
-3,Vincent,32
-
-```
-
-Easy binding in Go!
----
-
 ```go
 
 package main
