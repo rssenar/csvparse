@@ -75,7 +75,36 @@ The output will be...
 
 ### Usage:
 
-The behaviour is dicatated by the struct tags
+Behaviour is dicatated by the struct tags
 
-You can specify how the CSV header row matches the struct field by include a `csv:"(?i)^fullname$" fmt:"tc"`
+```
 
+csv:"(?i)^first[ _-]?name$" fmt:"tc"`
+csv:"(?i)^last[ _-]?name$" fmt:"tc"`
+csv:"(?i)^date$" fmt:"-"`
+
+```
+#### csv: Tags:
+"csv:" tag maps the struct field name to the csv column header. You can use string matching
+
+```
+
+csv:"Firstname"
+```
+
+or preferrably regex pattern mathcing "(?i)^last[ _-]?name$" for added flexibility and utility.
+
+```
+
+csv:"(?i)^first[ _-]?name$"
+
+```
+#### fmt: Tags:
+"fmt:" tag dictates the formating option for string values.  Options include:
+
+fmt: "tc" - Format string to title case, (eg. john smith -> John Smith)
+fmt: "uc" - Format string to upper case, (eg. john smith -> JOHN SMITH)
+fmt: "lc" - Format string to lower case, (eg. JOHN SMITH -> john smith)
+fmt: "fp" - Format phone number, (eg. 9497858798 -> (949) 785-8798)
+
+By default, leading and trailing spaces are removed
