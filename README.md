@@ -12,8 +12,8 @@ Give this simple yet common CSV dataset...
 
 ```
 FIRSTNAME,LASTNAME,ADDRESS_1,CITY,STATE,ZIP,CRRT,DP2,DPC,LOT,LOT_ORD,HPH,CPH,EMAIL,LICENSE,VIN,VYR,VMK,VMD,VML,DIS,ROAMT,DELDATE,IBFLAG,MAIL,TYPE,BPH,CNO,NU,APR,TERM,DATE,SQN,INC
-Toby,Avdeef,1000 KELLEY DR,FORT WORTH,TX,76140-3618,C003,0,0,,,,682-227-5578,,,4A3AK24F67E006257,2007,MITSUBISHI,ECLIPSE,,0,,,,,,,,,,,7/10/15,343820,2
-Natalie,Jackson,10000 IRON RIDGE DR,FORT WORTH,TX,76140-7527,R040,0,0,,,8175681080,,,,1C3EL46X04N213746,2004,CHRYSLER,SEBRING,,0,,12/31/03,,,,,,,,,10/14/10,343821,2
+Sherlock,Holmes,1000 BAKER DR,FORT WORTH,TX,76410-3620,C003,0,0,,,,692-250-8078,,,4A3ZM24F67E005557,2007,MITSUBISHI,ECLIPSE,,0,,,,,,,,,,,7/10/15,343820,2
+John,Watson,10000 RIDGE DR,FORT WORTH,CA,76240-7530,R040,0,0,,,8205692022,,,,1C3GW46X04N288746,2004,CHRYSLER,SEBRING,,0,,12/31/03,,,,,,,,,10/14/10,343821,2
 
 ```
 And given this struct...
@@ -42,31 +42,31 @@ The output will be...
 [
   {
    "Full_name": "",
-   "First_name": "Toby",
+   "First_name": "Sherlock",
    "Middle_name": "",
-   "Last_name": "Avdeef",
-   "Address_1": "1000 KELLEY DR",
+   "Last_name": "Holmes",
+   "Address_1": "1000 Baker Dr",
    "Address_2": "",
-   "City": "FORT WORTH",
+   "City": "Fort Worth",
    "State": "TX",
-   "Zip": "76140-3618",
-   "Zip_4": "",
+   "Zip": "76410",
+   "Zip_4": "3620",
    "Home_phone": "",
    "Email": "",
    "Last_service_date": "2015-07-10T00:00:00Z"
   },
   {
    "Full_name": "",
-   "First_name": "Natalie",
+   "First_name": "John",
    "Middle_name": "",
-   "Last_name": "Jackson",
-   "Address_1": "10000 IRON RIDGE DR",
+   "Last_name": "Watson",
+   "Address_1": "10000 Ridge Dr",
    "Address_2": "",
-   "City": "FORT WORTH",
-   "State": "TX",
-   "Zip": "76140-7527",
-   "Zip_4": "",
-   "Home_phone": "8175681080",
+   "City": "Fort Worth",
+   "State": "CA",
+   "Zip": "76240",
+   "Zip_4": "7530",
+   "Home_phone": "(820) 569-2022",
    "Email": "",
    "Last_service_date": "2010-10-14T00:00:00Z"
   }
@@ -78,10 +78,10 @@ The output will be...
 Behaviour is dicatated by the struct tags
 
 ```
-
-csv:"(?i)^first[ _-]?name$" fmt:"tc"`
-csv:"(?i)^last[ _-]?name$" fmt:"tc"`
-csv:"(?i)^date$" fmt:"-"`
+type struct {
+	Firstname string    `json:"First_name" csv:"(?i)^first[ _-]?name$" fmt:"tc"`
+	Lastname  string    `json:"Last_name" csv:"(?i)^last[ _-]?name$" fmt:"tc"`
+}
 
 ```
 #### csv: Tags:
@@ -109,5 +109,5 @@ fmt: "lc" - Format string to lower case, (eg. JOHN SMITH -> john smith)
 fmt: "fp" - Format phone number, (eg. 9497858798 -> (949) 785-8798)
 ```
 
-By default, leading and trailing spaces are removed
+By default, leading and trailing spaces are removed.
 

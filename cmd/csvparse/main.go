@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/csv"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -65,9 +64,9 @@ func main() {
 	data := []*client{}
 	var err error
 	err = cp.NewDecoder(input).DecodeCSV(&data)
-	// err = newEncoder(os.Stdout).encodeCSV(data, 1000)
-	jdata, err := json.MarshalIndent(data, " ", " ")
-	fmt.Println(string(jdata))
+	err = newEncoder(os.Stdout).encodeCSV(data, 1000)
+	// jdata, err := json.MarshalIndent(data, " ", " ")
+	// fmt.Println(string(jdata))
 	if err != nil {
 		log.Fatalln(err)
 	}
