@@ -32,7 +32,7 @@ type client struct {
 }
 
 func main() {
-	// defer timeTrack(time.Now(), "CSVParser")
+	defer timeTrack(time.Now(), "CSVParser")
 	flag.Parse()
 	args := flag.Args()
 

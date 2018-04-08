@@ -1,6 +1,6 @@
 csvparse
 =====
-A simple package for parsing csv files into structs. The API and techniques inspired from https://github.com/gocarina/gocsv but modified to fit my specific use case.
+A simple package for parsing csv files into structs. The API and techniques inspired from https://github.com/gocarina/gocsv but modified to fit my specific use cases.
 
 ### Installation
 
@@ -84,7 +84,8 @@ type struct {
 }
 
 ```
-#### csv: Tags:
+### csv: Tags:
+
 "csv:" tag maps the struct field name to the csv column header. You can use string matching
 
 ```
@@ -99,7 +100,10 @@ or preferrably regex pattern mathcing "(?i)^last[ _-]?name$" for added flexibili
 csv:"(?i)^first[ _-]?name$"
 
 ```
-#### fmt: Tags:
+if csv struct tag is not provided or tag is "-" (eg. csv:"-"). struct field name will be used for matching.
+
+### fmt: Tags:
+
 "fmt:" tag dictates the formating option for string values.  Options include:
 
 ```
@@ -107,7 +111,59 @@ fmt: "tc" - Format string to title case, (eg. john smith -> John Smith)
 fmt: "uc" - Format string to upper case, (eg. john smith -> JOHN SMITH)
 fmt: "lc" - Format string to lower case, (eg. JOHN SMITH -> john smith)
 fmt: "fp" - Format phone number, (eg. 9497858798 -> (949) 785-8798)
+fmt: "-" - No formating specified
 ```
 
-By default, leading and trailing spaces are removed.
+By default, leading and trailing spaces are removed. if fmt struct tag is not provided or tag is "-" (eg. fmt:"-"). Original string value will be returned.
+
+Time Values (time.Time):
+For struct field that are type time.Time will be formated according to RFC3339 time format (i.e. 2010-10-14T00:00:00Z). Empty time values will return will return Go's zero date value (0001-01-01 00:00:00 +0000 UTC).
+
+### Command Line Tool:
+
+from csvparse directory, the run the go install command.
+
+```
+>> go install ./cmd/csvparse/
+```
+
+you can pass the file as a argument (only supports sigle files, will panic if given mutiple files as arguments)
+
+```
+>> csvparse testfile.csv
+```
+
+or you can pipe input as a data stream from stdin
+
+```
+>> cat testfile.csv | csvparse
+```
+
+
+### Performance:
+
+performace is good but looking to improve performance with future cocurrency optimizations.
+
+```
+>> wc -l $(ls)
+   10000 a.csv
+   30000 b.csv
+   50000 c.csv
+  100000 d.csv
+  190000 total
+
+>> csvparse a.csv > /dev/null
+2018/04/07 20:24:50 CSVParser took 361.195842ms
+>> csvparse b.csv > /dev/null
+2018/04/07 20:24:55 CSVParser took 866.488151ms
+>> csvparse c.csv > /dev/null
+2018/04/07 20:25:00 CSVParser took 1.414062947s
+>> csvparse d.csv > /dev/null
+2018/04/07 20:25:07 CSVParser took 2.810645883s
+```
+
+
+
+
+
 
