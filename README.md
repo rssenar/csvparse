@@ -8,7 +8,7 @@ A simple package for parsing csv files into structs. The API and techniques insp
 
 ### Sample:
 
-Give this simple yet common CSV dataset...
+Given this CSV dataset...
 
 ```
 FIRSTNAME,LASTNAME,ADDRESS_1,CITY,STATE,ZIP,CRRT,DP2,DPC,LOT,LOT_ORD,HPH,CPH,EMAIL,LICENSE,VIN,VYR,VMK,VMD,VML,DIS,ROAMT,DELDATE,IBFLAG,MAIL,TYPE,BPH,CNO,NU,APR,TERM,DATE,SQN,INC
@@ -34,6 +34,14 @@ type client struct {
 	Email     string    `json:"Email" csv:"(?i)^email[ _]?(address)?$" fmt:"lc"`
 	Date      time.Time `json:"Last_service_date" csv:"(?i)^date$" fmt:"-"`
 }
+
+data := []*client{}
+
+err = cp.NewDecoder(os.Stdin).DecodeCSV(&data)
+if err != nil {
+  log.Fatalln(err)
+}
+
 ```
 
 The output will be...
