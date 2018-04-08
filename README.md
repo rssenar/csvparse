@@ -102,9 +102,12 @@ csv:"(?i)^first[ _-]?name$"
 #### fmt: Tags:
 "fmt:" tag dictates the formating option for string values.  Options include:
 
+```
 fmt: "tc" - Format string to title case, (eg. john smith -> John Smith)
 fmt: "uc" - Format string to upper case, (eg. john smith -> JOHN SMITH)
 fmt: "lc" - Format string to lower case, (eg. JOHN SMITH -> john smith)
 fmt: "fp" - Format phone number, (eg. 9497858798 -> (949) 785-8798)
+```
 
 By default, leading and trailing spaces are removed
+
