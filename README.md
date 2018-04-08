@@ -129,6 +129,8 @@ For struct field that are type time.Time will be formated according to RFC3339 t
 
 ### Command Line Tool:
 
+I also proviede a handy tool if you prefer to use this as a CLI.
+
 from csvparse directory, the run the go install command.
 
 ```
@@ -147,6 +149,20 @@ or you can pipe input as a data stream from stdin
 >> cat testfile.csv | csvparse
 ```
 
+The output will be the parsed and reformated csv representation of the struct field provided. struct field names will be use as the CSV field headers.
+
+```
+>> cat test.csv
+FIRSTNAME,LASTNAME,ADDRESS_1,CITY,STATE,ZIP,CRRT,DP2,DPC,LOT,LOT_ORD,HPH,CPH,EMAIL,LICENSE,VIN,VYR,VMK,VMD,VML,DIS,ROAMT,DELDATE,IBFLAG,MAIL,TYPE,BPH,CNO,NU,APR,TERM,DATE,SQN,INC
+Sherlock,Holmes,1000 BAKER DR,FORT WORTH,TX,76410-3620,C003,0,0,,,,692-250-8078,,,4A3ZM24F67E005557,2007,MITSUBISHI,ECLIPSE,,0,,,,,,,,,,,7/10/15,343820,2
+John,Watson,10000 RIDGE DR,FORT WORTH,CA,76240-7530,R040,0,0,,,8205692022,,,,1C3GW46X04N288746,2004,CHRYSLER,SEBRING,,0,,12/31/03,,,,,,,,,10/14/10,343821,2
+
+>> csvparse test.csv
+Fullname,Firstname,MI,Lastname,Address1,Address2,City,State,Zip,Zip4,HPH,Email,Date
+,Sherlock,,Holmes,1000 Baker Dr,,Fort Worth,TX,76410,3620,,,2015-07-10
+,John,,Watson,10000 Ridge Dr,,Fort Worth,CA,76240,7530,(820) 569-2022,,2010-10-14
+
+```
 
 ### Performance:
 
