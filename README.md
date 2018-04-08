@@ -142,7 +142,7 @@ or you can pipe input as a data stream from stdin
 
 ### Performance:
 
-performace is good but looking to improve performance with future cocurrency optimizations.
+performace is good but looking to improve performance with future concurrency optimizations.
 
 ```
 >> wc -l $(ls)
@@ -162,8 +162,10 @@ performace is good but looking to improve performance with future cocurrency opt
 2018/04/07 20:25:07 CSVParser took 2.810645883s
 ```
 
+### Caveats & Limitations:
 
+in its current version, the package ONLY supports parsing to []structs.  Passing anything other than []structs results in a panic.
 
+### License:
 
-
-
+The MIT License (MIT)
