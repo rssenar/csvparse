@@ -172,7 +172,7 @@ testfile1.csv		testfile1_parsed.csv	testfile2.csv		testfile2_parsed.csv	testfile
 
 ```
 
-or you can pipe input as a data stream from stdin
+or you can pipe input as a data stream from stdin to be printed to stdout
 
 ```
 >> cat testfile.csv | csvparse
@@ -192,6 +192,15 @@ Fullname,Firstname,MI,Lastname,Address1,Address2,City,State,Zip,Zip4,HPH,Email,D
 ,John,,Watson,10000 Ridge Dr,,Fort Worth,CA,76240,7530,(820) 569-2022,,2010-10-14
 
 ```
+
+### Specific Use Cases:
+
+For my specific use case, I typically require parsing of Zip codes (e.g 92882-4578) to Zip & ZIp4 components.  By default, if ZIP fields matches the regex patern, Zip & ZIp4 components will be parsed accordingly.
+
+Another specialized us case is Fullname parsing.  If a fullname field is provided amd there is a missing First or Last Name field, Fullname will be parsed to First. Middle amd Last Name fields respectively.
+
+Fullname parsing is handled by [github.com/blendlabs/go-name-parser](https://github.com/blendlabs/go-name-parser) package.
+
 
 ### Caveats & Limitations:
 
