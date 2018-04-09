@@ -19,7 +19,7 @@ John,Watson,10000 RIDGE DR,FORT WORTH,CA,76240-7530,R040,0,0,,,8205692022,,,,1C3
 And given this struct...
 
 ```
-type client struct {
+type D struct {
 	Fullname  string    `json:"Full_name" csv:"(?i)^fullname$" fmt:"tc"`
 	Firstname string    `json:"First_name" csv:"(?i)^first[ _-]?name$" fmt:"tc"`
 	MI        string    `json:"Middle_name" csv:"(?i)^mi$" fmt:"uc"`
@@ -35,7 +35,7 @@ type client struct {
 	Date      time.Time `json:"Last_service_date" csv:"(?i)^date$" fmt:"-"`
 }
 
-data := []*client{}
+data := []*D{}
 
 err = cp.NewDecoder(os.Stdin).DecodeCSV(&data)
 if err != nil {

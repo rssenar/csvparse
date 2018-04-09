@@ -1,18 +1,20 @@
 package main
 
 import (
-	"encoding/json"
+	"encoding/csv"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"reflect"
 	"time"
 
 	cp "github.com/rssenar/csvparse"
 )
 
-type client struct {
+// D is the stuct the CSV file will be unmarshalled to
+type D struct {
 	Fullname   string    `json:"Full_name" csv:"(?i)^fullname$" fmt:"tc"`
 	Firstname  string    `json:"First_name" csv:"(?i)^first[ _-]?name$" fmt:"tc"`
 	MI         string    `json:"Middle_name" csv:"(?i)^mi$" fmt:"uc"`
@@ -38,168 +40,141 @@ type client struct {
 }
 
 func main() {
-	// defer timeTrack(time.Now(), "CSVParser")
 	flag.Parse()
 	args := flag.Args()
-
-	var input io.Reader
 	if len(args) != 0 {
-		// verify if file was passed through as a command-line argument
-		if len(args) > 1 {
-			log.Fatalln("Error: Cannot parse multiple files")
-		}
-		file, err := os.Open(args[0])
-		defer file.Close()
-		if err != nil {
-			log.Fatalf("%v : No such file or directory\n", args[0])
-		}
-		input = file
+		parseArgsInput(args)
 	} else {
-		// verify if file was passed through from os.Stdin
 		fi, err := os.Stdin.Stat()
 		if err != nil {
-			log.Fatalf("%v : Error reading stdin file info\n", err)
+			log.Fatalf("%v : Error reading stdin\n", err)
 		}
 		if fi.Size() == 0 {
-			log.Fatalf("Input file not specified")
+			log.Fatalln("Unspecified Input file")
 		}
-		input = os.Stdin
-	}
-
-	// Pass in blank []*Record{} container to be filled
-	data := []*client{}
-	var err error
-	err = cp.NewDecoder(input).DecodeCSV(&data)
-	// err = newEncoder(os.Stdout).encodeCSV(data, 1000)
-	jdata, err := json.MarshalIndent(data, " ", " ")
-	fmt.Println(string(jdata))
-	if err != nil {
-		log.Fatalln(err)
+		parseStdinInput(os.Stdin)
 	}
 }
 
-// type csvEncoder struct{ output io.Writer }
+func parseStdinInput(input io.Reader) {
+	start := time.Now()
+	data := []*D{}
+	err := cp.NewDecoder(input).DecodeCSV(&data)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	w := csv.NewWriter(os.Stdout)
+	sValue := reflect.ValueOf(data)
 
-// // NewEncoder initializes a new output
-// func newEncoder(output io.Writer) *csvEncoder { return &csvEncoder{output: output} }
+	var hrow []string
+	for j := 0; j < sValue.Index(0).Elem().NumField(); j++ {
+		hrow = append(hrow, fmt.Sprint(reflect.Indirect(sValue.Index(0).Elem()).Type().Field(j).Name))
+	}
+	if err := w.Write(hrow); err != nil {
+		log.Fatalf("could not write header to csv: %v", err)
+	}
+	w.Flush()
+	if err := w.Error(); err != nil {
+		log.Fatalf("writer failed: %v", err)
+	}
 
-// // EncodeCSV marshalls the Record struct then outputs to csv
-// func (e *csvEncoder) encodeCSV(data []*client, concurency int) error {
-// 	// defer timeTrack(time.Now(), "EncodeStructtoCSV")
+	for i := 0; i < sValue.Len(); i++ {
+		var row []string
+		for j := 0; j < sValue.Index(i).Elem().NumField(); j++ {
+			vType := sValue.Index(i).Elem().Field(j).Type()
 
-// 	var Client *client
+			switch vType {
+			case reflect.TypeOf(time.Now()):
+				time := fmt.Sprint(sValue.Index(i).Elem().Field(j))[:10]
+				if time == "0001-01-01" {
+					time = ""
+				}
+				row = append(row, time)
+			default:
+				row = append(row, fmt.Sprint(sValue.Index(i).Elem().Field(j)))
+			}
+		}
+		if err := w.Write(row); err != nil {
+			log.Fatalf("could not write header to csv: %v", err)
+		}
+		w.Flush()
+		if err := w.Error(); err != nil {
+			log.Fatalf("writer failed: %v", err)
+		}
+	}
+	Elapsed := time.Since(start)
+	log.Printf("csvparse took %v", Elapsed)
+}
 
-// 	tasks := make(chan *client)
-// 	go func() {
-// 		for _, Client = range data {
-// 			tasks <- Client
-// 		}
-// 		close(tasks)
-// 	}()
+func parseArgsInput(args []string) {
+	for _, filename := range args {
+		start := time.Now()
+		data := []*D{}
+		inputfile, err := os.Open(filename)
+		defer inputfile.Close()
+		if err != nil {
+			log.Fatalln(err)
+		}
+		err = cp.NewDecoder(inputfile).DecodeCSV(&data)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		outputfile, err := os.Create(fmt.Sprintf("%v_parsed.csv", inputfile.Name()[:len(inputfile.Name())-4]))
+		defer outputfile.Close()
+		if err != nil {
+			log.Fatalln(err)
+		}
+		w := csv.NewWriter(outputfile)
+		sValue := reflect.ValueOf(data)
 
-// 	results := make(chan []string)
-// 	var wg sync.WaitGroup
+		var hrow []string
+		for j := 0; j < sValue.Index(0).Elem().NumField(); j++ {
+			hrow = append(hrow, fmt.Sprint(reflect.Indirect(sValue.Index(0).Elem()).Type().Field(j).Name))
+		}
+		if err := w.Write(hrow); err != nil {
+			log.Fatalf("could not write header to csv: %v", err)
+		}
+		w.Flush()
+		if err := w.Error(); err != nil {
+			log.Fatalf("writer failed: %v", err)
+		}
 
-// 	wg.Add(concurency)
+		for i := 0; i < sValue.Len(); i++ {
+			var row []string
+			for j := 0; j < sValue.Index(i).Elem().NumField(); j++ {
+				vType := sValue.Index(i).Elem().Field(j).Type()
+				switch vType {
+				case reflect.TypeOf(time.Now()):
+					time := fmt.Sprint(sValue.Index(i).Elem().Field(j))[:10]
+					if time == "0001-01-01" {
+						time = ""
+					}
+					row = append(row, time)
+				default:
+					row = append(row, fmt.Sprint(sValue.Index(i).Elem().Field(j)))
+				}
+			}
+			if err := w.Write(row); err != nil {
+				log.Fatalf("could not write header to csv: %v", err)
+			}
+			w.Flush()
+			if err := w.Error(); err != nil {
+				log.Fatalf("writer failed: %v", err)
+			}
+		}
+		_, err = io.Copy(outputfile, inputfile)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		Elapsed := time.Since(start)
+		log.Printf("%v was parser in %v", inputfile.Name(), Elapsed)
+	}
+}
 
-// 	go func() {
-// 		wg.Wait()
-// 		close(results)
-// 	}()
+func timeTrack(start time.Time, name string) {
+	elapsed := time.Since(start)
+	log.Printf("%s took %s", name, elapsed)
+}
 
-// 	for i := 0; i < concurency; i++ {
-// 		go func() {
-// 			defer wg.Done()
-// 			for t := range tasks {
-// 				r, err := process(t)
-// 				if err != nil {
-// 					log.Println(err)
-// 					continue
-// 				}
-// 				results <- r
-// 			}
-// 		}()
-// 	}
-// 	if err := print(e.output, results, Client); err != nil {
-// 		log.Printf("could not write to %s: %v", e.output, err)
-// 	}
-// 	return nil
-// }
-
-// func process(t *client) ([]string, error) {
-// 	if t.Fullname != "" && (t.Firstname == "" || t.Lastname == "") {
-// 		name := names.Parse(t.Fullname)
-// 		t.Firstname = name.FirstName
-// 		t.MI = name.MiddleName
-// 		t.Lastname = name.LastName
-// 	}
-// 	if t.Zip != "" {
-// 		zip, zip4 := cp.ParseZip(t.Zip)
-// 		t.Zip = zip
-// 		if zip4 != "" {
-// 			t.Zip4 = zip4
-// 		}
-// 	}
-
-// 	var row []string
-// 	sValue := reflect.ValueOf(t).Elem()
-// 	for i := 0; i < sValue.NumField(); i++ {
-// 		var value string
-// 		name := reflect.Indirect(sValue).Type().Field(i).Name
-// 		switch sValue.Field(i).Type() {
-// 		case reflect.TypeOf(time.Now()):
-// 			time := fmt.Sprint(sValue.FieldByName(name))[:10]
-// 			if time == "0001-01-01" {
-// 				time = ""
-// 			}
-// 			value = time
-// 		default:
-// 			if format, ok := reflect.Indirect(sValue).Type().Field(i).Tag.Lookup("fmt"); ok {
-// 				switch format {
-// 				case "-":
-// 					value = fmt.Sprint(sValue.FieldByName(name))
-// 				default:
-// 					fmtvalue, err := cp.FormatStringVals(format, fmt.Sprint(sValue.FieldByName(name)))
-// 					if err != nil {
-// 						return nil, err
-// 					}
-// 					value = fmtvalue
-// 				}
-// 			} else {
-// 				value = fmt.Sprint(sValue.FieldByName(name))
-// 			}
-// 		}
-// 		row = append(row, value)
-// 	}
-// 	return row, nil
-// }
-
-// func print(output io.Writer, records <-chan []string, c *client) error {
-// 	w := csv.NewWriter(output)
-
-// 	var header []string
-// 	sValue := reflect.ValueOf(c).Elem()
-// 	for i := 0; i < sValue.NumField(); i++ {
-// 		name := reflect.Indirect(sValue).Type().Field(i).Name
-// 		header = append(header, name)
-// 	}
-// 	if err := w.Write(header); err != nil {
-// 		log.Fatalf("could not write header to csv: %v", err)
-// 	}
-
-// 	for r := range records {
-// 		if err := w.Write(r); err != nil {
-// 			log.Fatalf("could not write record to csv: %v", err)
-// 		}
-// 	}
-// 	w.Flush()
-// 	if err := w.Error(); err != nil {
-// 		return fmt.Errorf("writer failed: %v", err)
-// 	}
-// 	return nil
-// }
-
-// func timeTrack(start time.Time, name string) {
-// 	elapsed := time.Since(start)
-// 	log.Printf("%s took %s", name, elapsed)
-// }
+// val := sValue.Index(i).Elem().Field(j)
+// name := reflect.Indirect(sValue.Index(i).Elem()).Type().Field(j).Name
