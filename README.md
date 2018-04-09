@@ -137,10 +137,39 @@ from csvparse directory, the run the go install command.
 >> go install ./cmd/csvparse/
 ```
 
-you can pass the file as a argument (only supports sigle files, will panic if given mutiple files as arguments)
+you can pass a file or mutliple files as a argument. Output files will be labeled with the current file name plus _parsed.csv.
 
 ```
+>> ls
+testfile.csv
+
 >> csvparse testfile.csv
+2018/04/09 16:27:01 testfile.csv was parser in 801.853858ms
+
+>> ls
+testfile.csv		testfile_parsed.csv
+
+```
+
+```
+>> ls
+testfile1.csv	testfile2.csv	testfile3.csv
+
+>> wc -l $(ls)
+   10000 testfile1.csv
+   30000 testfile2.csv
+   50000 testfile3.csv
+   90000 total
+
+>> csvparse $(ls)
+2018/04/09 16:29:00 testfile1.csv was parser in 792.097509ms
+2018/04/09 16:29:02 testfile2.csv was parser in 2.313945665s
+2018/04/09 16:29:06 testfile3.csv was parser in 3.939320765s
+
+>> ls
+testfile1.csv		testfile1_parsed.csv	testfile2.csv		testfile2_parsed.csv	testfile3.csv		testfile3_parsed.csv
+
+
 ```
 
 or you can pipe input as a data stream from stdin
@@ -162,28 +191,6 @@ Fullname,Firstname,MI,Lastname,Address1,Address2,City,State,Zip,Zip4,HPH,Email,D
 ,Sherlock,,Holmes,1000 Baker Dr,,Fort Worth,TX,76410,3620,,,2015-07-10
 ,John,,Watson,10000 Ridge Dr,,Fort Worth,CA,76240,7530,(820) 569-2022,,2010-10-14
 
-```
-
-### Performance:
-
-performace is good but looking to improve performance with future concurrency optimizations.
-
-```
->> wc -l $(ls)
-   10000 a.csv
-   30000 b.csv
-   50000 c.csv
-  100000 d.csv
-  190000 total
-
->> csvparse a.csv > /dev/null
-2018/04/07 20:24:50 CSVParser took 361.195842ms
->> csvparse b.csv > /dev/null
-2018/04/07 20:24:55 CSVParser took 866.488151ms
->> csvparse c.csv > /dev/null
-2018/04/07 20:25:00 CSVParser took 1.414062947s
->> csvparse d.csv > /dev/null
-2018/04/07 20:25:07 CSVParser took 2.810645883s
 ```
 
 ### Caveats & Limitations:
