@@ -1,17 +1,14 @@
 package main
 
 import (
-	"encoding/csv"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"reflect"
-	"sync"
 	"time"
 
-	"github.com/blendlabs/go-name-parser"
 	cp "github.com/rssenar/csvparse"
 )
 
@@ -41,7 +38,7 @@ type client struct {
 }
 
 func main() {
-	defer timeTrack(time.Now(), "CSVParser")
+	// defer timeTrack(time.Now(), "CSVParser")
 	flag.Parse()
 	args := flag.Args()
 
@@ -73,136 +70,136 @@ func main() {
 	data := []*client{}
 	var err error
 	err = cp.NewDecoder(input).DecodeCSV(&data)
-	err = newEncoder(os.Stdout).encodeCSV(data, 1000)
-	// jdata, err := json.MarshalIndent(data, " ", " ")
-	// fmt.Println(string(jdata))
+	// err = newEncoder(os.Stdout).encodeCSV(data, 1000)
+	jdata, err := json.MarshalIndent(data, " ", " ")
+	fmt.Println(string(jdata))
 	if err != nil {
 		log.Fatalln(err)
 	}
 }
 
-type csvEncoder struct{ output io.Writer }
+// type csvEncoder struct{ output io.Writer }
 
-// NewEncoder initializes a new output
-func newEncoder(output io.Writer) *csvEncoder { return &csvEncoder{output: output} }
+// // NewEncoder initializes a new output
+// func newEncoder(output io.Writer) *csvEncoder { return &csvEncoder{output: output} }
 
-// EncodeCSV marshalls the Record struct then outputs to csv
-func (e *csvEncoder) encodeCSV(data []*client, concurency int) error {
-	// defer timeTrack(time.Now(), "EncodeStructtoCSV")
+// // EncodeCSV marshalls the Record struct then outputs to csv
+// func (e *csvEncoder) encodeCSV(data []*client, concurency int) error {
+// 	// defer timeTrack(time.Now(), "EncodeStructtoCSV")
 
-	var Client *client
+// 	var Client *client
 
-	tasks := make(chan *client)
-	go func() {
-		for _, Client = range data {
-			tasks <- Client
-		}
-		close(tasks)
-	}()
+// 	tasks := make(chan *client)
+// 	go func() {
+// 		for _, Client = range data {
+// 			tasks <- Client
+// 		}
+// 		close(tasks)
+// 	}()
 
-	results := make(chan []string)
-	var wg sync.WaitGroup
+// 	results := make(chan []string)
+// 	var wg sync.WaitGroup
 
-	wg.Add(concurency)
+// 	wg.Add(concurency)
 
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
+// 	go func() {
+// 		wg.Wait()
+// 		close(results)
+// 	}()
 
-	for i := 0; i < concurency; i++ {
-		go func() {
-			defer wg.Done()
-			for t := range tasks {
-				r, err := process(t)
-				if err != nil {
-					log.Println(err)
-					continue
-				}
-				results <- r
-			}
-		}()
-	}
-	if err := print(e.output, results, Client); err != nil {
-		log.Printf("could not write to %s: %v", e.output, err)
-	}
-	return nil
-}
+// 	for i := 0; i < concurency; i++ {
+// 		go func() {
+// 			defer wg.Done()
+// 			for t := range tasks {
+// 				r, err := process(t)
+// 				if err != nil {
+// 					log.Println(err)
+// 					continue
+// 				}
+// 				results <- r
+// 			}
+// 		}()
+// 	}
+// 	if err := print(e.output, results, Client); err != nil {
+// 		log.Printf("could not write to %s: %v", e.output, err)
+// 	}
+// 	return nil
+// }
 
-func process(t *client) ([]string, error) {
-	if t.Fullname != "" && (t.Firstname == "" || t.Lastname == "") {
-		name := names.Parse(t.Fullname)
-		t.Firstname = name.FirstName
-		t.MI = name.MiddleName
-		t.Lastname = name.LastName
-	}
-	if t.Zip != "" {
-		zip, zip4 := cp.ParseZip(t.Zip)
-		t.Zip = zip
-		if zip4 != "" {
-			t.Zip4 = zip4
-		}
-	}
+// func process(t *client) ([]string, error) {
+// 	if t.Fullname != "" && (t.Firstname == "" || t.Lastname == "") {
+// 		name := names.Parse(t.Fullname)
+// 		t.Firstname = name.FirstName
+// 		t.MI = name.MiddleName
+// 		t.Lastname = name.LastName
+// 	}
+// 	if t.Zip != "" {
+// 		zip, zip4 := cp.ParseZip(t.Zip)
+// 		t.Zip = zip
+// 		if zip4 != "" {
+// 			t.Zip4 = zip4
+// 		}
+// 	}
 
-	var row []string
-	sValue := reflect.ValueOf(t).Elem()
-	for i := 0; i < sValue.NumField(); i++ {
-		var value string
-		name := reflect.Indirect(sValue).Type().Field(i).Name
-		switch sValue.Field(i).Type() {
-		case reflect.TypeOf(time.Now()):
-			time := fmt.Sprint(sValue.FieldByName(name))[:10]
-			if time == "0001-01-01" {
-				time = ""
-			}
-			value = time
-		default:
-			if format, ok := reflect.Indirect(sValue).Type().Field(i).Tag.Lookup("fmt"); ok {
-				switch format {
-				case "-":
-					value = fmt.Sprint(sValue.FieldByName(name))
-				default:
-					fmtvalue, err := cp.FormatStringVals(format, fmt.Sprint(sValue.FieldByName(name)))
-					if err != nil {
-						return nil, err
-					}
-					value = fmtvalue
-				}
-			} else {
-				value = fmt.Sprint(sValue.FieldByName(name))
-			}
-		}
-		row = append(row, value)
-	}
-	return row, nil
-}
+// 	var row []string
+// 	sValue := reflect.ValueOf(t).Elem()
+// 	for i := 0; i < sValue.NumField(); i++ {
+// 		var value string
+// 		name := reflect.Indirect(sValue).Type().Field(i).Name
+// 		switch sValue.Field(i).Type() {
+// 		case reflect.TypeOf(time.Now()):
+// 			time := fmt.Sprint(sValue.FieldByName(name))[:10]
+// 			if time == "0001-01-01" {
+// 				time = ""
+// 			}
+// 			value = time
+// 		default:
+// 			if format, ok := reflect.Indirect(sValue).Type().Field(i).Tag.Lookup("fmt"); ok {
+// 				switch format {
+// 				case "-":
+// 					value = fmt.Sprint(sValue.FieldByName(name))
+// 				default:
+// 					fmtvalue, err := cp.FormatStringVals(format, fmt.Sprint(sValue.FieldByName(name)))
+// 					if err != nil {
+// 						return nil, err
+// 					}
+// 					value = fmtvalue
+// 				}
+// 			} else {
+// 				value = fmt.Sprint(sValue.FieldByName(name))
+// 			}
+// 		}
+// 		row = append(row, value)
+// 	}
+// 	return row, nil
+// }
 
-func print(output io.Writer, records <-chan []string, c *client) error {
-	w := csv.NewWriter(output)
+// func print(output io.Writer, records <-chan []string, c *client) error {
+// 	w := csv.NewWriter(output)
 
-	var header []string
-	sValue := reflect.ValueOf(c).Elem()
-	for i := 0; i < sValue.NumField(); i++ {
-		name := reflect.Indirect(sValue).Type().Field(i).Name
-		header = append(header, name)
-	}
-	if err := w.Write(header); err != nil {
-		log.Fatalf("could not write header to csv: %v", err)
-	}
+// 	var header []string
+// 	sValue := reflect.ValueOf(c).Elem()
+// 	for i := 0; i < sValue.NumField(); i++ {
+// 		name := reflect.Indirect(sValue).Type().Field(i).Name
+// 		header = append(header, name)
+// 	}
+// 	if err := w.Write(header); err != nil {
+// 		log.Fatalf("could not write header to csv: %v", err)
+// 	}
 
-	for r := range records {
-		if err := w.Write(r); err != nil {
-			log.Fatalf("could not write record to csv: %v", err)
-		}
-	}
-	w.Flush()
-	if err := w.Error(); err != nil {
-		return fmt.Errorf("writer failed: %v", err)
-	}
-	return nil
-}
+// 	for r := range records {
+// 		if err := w.Write(r); err != nil {
+// 			log.Fatalf("could not write record to csv: %v", err)
+// 		}
+// 	}
+// 	w.Flush()
+// 	if err := w.Error(); err != nil {
+// 		return fmt.Errorf("writer failed: %v", err)
+// 	}
+// 	return nil
+// }
 
-func timeTrack(start time.Time, name string) {
-	elapsed := time.Since(start)
-	log.Printf("%s took %s", name, elapsed)
-}
+// func timeTrack(start time.Time, name string) {
+// 	elapsed := time.Since(start)
+// 	log.Printf("%s took %s", name, elapsed)
+// }

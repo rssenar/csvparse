@@ -159,6 +159,11 @@ func timeTrack(start time.Time, name string) {
 	log.Printf("%s took %s", name, elapsed)
 }
 
+func makeChannel(t reflect.Type, chanDir reflect.ChanDir, buffer int) reflect.Value {
+	ctype := reflect.ChanOf(chanDir, t)
+	return reflect.MakeChan(ctype, buffer)
+}
+
 // type client struct {
 // 	Fullname   string    `json:"Full_name" csv:"(?i)^fullname$" fmt:"tc"`
 // 	Firstname  string    `json:"First_name" csv:"(?i)^first[ _-]?name$" fmt:"tc"`

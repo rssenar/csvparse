@@ -2,10 +2,14 @@ package csvparse
 
 import (
 	"errors"
+	"fmt"
 	"io"
+	"log"
 	"reflect"
 	"regexp"
 	"time"
+
+	"github.com/blendlabs/go-name-parser"
 )
 
 // CSVDecoder holds the header field map and io.reader interface
@@ -25,7 +29,7 @@ func NewDecoder(input io.Reader) *CSVDecoder {
 // DecodeCSV unmarshalls CSV file to a specified struct type
 func (d *CSVDecoder) DecodeCSV(v interface{}) error {
 	// Optional timer function for determining function duration
-	// defer timeTrack(time.Now(), "DecodeCSVtoStruct")
+	defer timeTrack(time.Now(), "DecodeCSVtoStruct")
 
 	// getCSVRows grabs [][]strings from spcified input
 	csvRows, err := GetCSVRows(d.file)
@@ -100,12 +104,40 @@ func (d *CSVDecoder) DecodeCSV(v interface{}) error {
 				}
 			default:
 				if _, ok := d.header[sFName]; ok {
-					val := csvRow[d.header[sFName]]
-					innerValueRow.Elem().FieldByName(sFName).Set(reflect.ValueOf(val))
+					if format, ok := reflect.Indirect(innerValueRow).Type().Field(j).Tag.Lookup("fmt"); ok {
+						if format != "-" {
+							val := csvRow[d.header[sFName]]
+							fmtvalue, err := FormatStringVals(format, val)
+							if err != nil {
+								log.Fatalln(err)
+							}
+							innerValueRow.Elem().FieldByName(sFName).SetString(fmtvalue)
+						} else {
+							val := csvRow[d.header[sFName]]
+							innerValueRow.Elem().FieldByName(sFName).SetString(val)
+						}
+					}
+				}
+			}
+			if j == innerValueRow.Elem().NumField()-1 {
+				FullN := innerValueRow.Elem().FieldByName("Fullname")
+				FN := innerValueRow.Elem().FieldByName("Firstname")
+				LN := innerValueRow.Elem().FieldByName("Lastname")
+				if FullN.String() != "" && (FN.String() == "" || LN.String() == "") {
+					name := names.Parse(FullN.String())
+					innerValueRow.Elem().FieldByName("Firstname").SetString(name.FirstName)
+					innerValueRow.Elem().FieldByName("MI").SetString(name.MiddleName)
+					innerValueRow.Elem().FieldByName("Lastname").SetString(name.LastName)
+				}
+				if fmt.Sprint(innerValueRow.Elem().FieldByName("Zip")) != "" {
+					zip, zip4 := ParseZip(fmt.Sprint(innerValueRow.Elem().FieldByName("Zip")))
+					innerValueRow.Elem().FieldByName("Zip").SetString(zip)
+					if innerValueRow.Elem().FieldByName("Zp4").String() != "" {
+						innerValueRow.Elem().FieldByName("Zip4").SetString(zip4)
+					}
 				}
 			}
 		}
-
 		slice.Set(reflect.Append(slice, innerValueRow))
 	}
 	return nil
