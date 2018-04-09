@@ -1,6 +1,6 @@
 csvparse
 =====
-A simple package for parsing csv files into structs. The API and techniques inspired from https://github.com/gocarina/gocsv but modified to fit my specific use cases.
+A simple package for parsing csv files into structs. The API and techniques inspired from  [github.com/gocarina/gocsv](https://github.com/gocarina/gocsv) but modified to fit my specific use cases.
 
 ### Installation
 
