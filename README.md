@@ -1,5 +1,7 @@
-csvparse
-=====
+# csvparse
+
+ [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/rssenar/csvparse/blob/master/LICENSE)
+
 A simple package for parsing csv files into structs. The API and techniques inspired from  [github.com/gocarina/gocsv](https://github.com/gocarina/gocsv) but modified to fit my specific use cases.
 
 ### Installation

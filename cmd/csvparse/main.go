@@ -162,10 +162,6 @@ func parseArgsInput(args []string) {
 				log.Fatalf("writer failed: %v", err)
 			}
 		}
-		_, err = io.Copy(outputfile, inputfile)
-		if err != nil {
-			log.Fatalln(err)
-		}
 		Elapsed := time.Since(start)
 		log.Printf("%v was parser in %v", inputfile.Name(), Elapsed)
 	}
