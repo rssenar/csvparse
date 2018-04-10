@@ -83,7 +83,7 @@ The output will be...
 
 ### Usage:
 
-Behaviour is dicatated by the struct tags
+Behaviour is dicatated through the struct tags
 
 ```
 type struct {
@@ -129,7 +129,7 @@ For struct field that are type time.Time will be formated according to RFC3339 t
 
 ### Command Line Tool:
 
-I also proviede a handy tool if you prefer to use this as a CLI.
+Included is a command line tool if you prefer to use this as a CLI.
 
 from csvparse directory, the run the go install command.
 
@@ -137,7 +137,7 @@ from csvparse directory, the run the go install command.
 >> go install ./cmd/csvparse/
 ```
 
-you can pass a file or mutliple files as a argument. Output files will be labeled with the current file name plus _parsed.csv.
+you can pass a single file or mutliple files as a argument. Output files will be labeled with the current file name plus _parsed.csv.
 
 ```
 >> ls
@@ -172,15 +172,33 @@ testfile1.csv		testfile1_parsed.csv	testfile2.csv		testfile2_parsed.csv	testfile
 
 ```
 
-or you can pipe input as a data stream from stdin to be printed to stdout
+You can also pipe in input from stdin to be printed to stdout or redirected to another file
 
 ```
 >> cat testfile.csv | csvparse
+
+>> cat testfile.csv | csvparse > out.csv
 ```
 
-The output will be the parsed and reformated csv representation of the struct field provided. struct field names will be use as the CSV field headers.
+The output file will be the parsed and reformated as a csv representation of the struct provided. Struct field names will be use as the CSV field headers.
 
 ```
+struct {
+	Fullname  string    `json:"Full_name" csv:"(?i)^fullname$" fmt:"tc"`
+	Firstname string    `json:"First_name" csv:"(?i)^first[ _-]?name$" fmt:"tc"`
+	MI        string    `json:"Middle_name" csv:"(?i)^mi$" fmt:"uc"`
+	Lastname  string    `json:"Last_name" csv:"(?i)^last[ _-]?name$" fmt:"tc"`
+	Address1  string    `json:"Address_1" csv:"(?i)^address[ _-]?1?$" fmt:"tc"`
+	Address2  string    `json:"Address_2" csv:"(?i)^address[ _-]?2$" fmt:"tc"`
+	City      string    `json:"City" csv:"(?i)^city$" fmt:"tc"`
+	State     string    `json:"State" csv:"(?i)^state$|^st$" fmt:"uc"`
+	Zip       string    `json:"Zip" csv:"(?i)^(zip|postal)[ _]?(code)?$" fmt:"-"`
+	Zip4      string    `json:"Zip_4" csv:"(?i)^zip4$|^4zip$" fmt:"-"`
+	HPH       string    `json:"Home_phone" csv:"(?i)^hph$|^home[ _]phone$" fmt:"fp"`
+	Email     string    `json:"Email" csv:"(?i)^email[ _]?(address)?$" fmt:"lc"`
+	Date      time.Time `json:"Last_service_date" csv:"(?i)^date$" fmt:"-"`
+}
+
 >> cat test.csv
 FIRSTNAME,LASTNAME,ADDRESS_1,CITY,STATE,ZIP,CRRT,DP2,DPC,LOT,LOT_ORD,HPH,CPH,EMAIL,LICENSE,VIN,VYR,VMK,VMD,VML,DIS,ROAMT,DELDATE,IBFLAG,MAIL,TYPE,BPH,CNO,NU,APR,TERM,DATE,SQN,INC
 Sherlock,Holmes,1000 BAKER DR,FORT WORTH,TX,76410-3620,C003,0,0,,,,692-250-8078,,,4A3ZM24F67E005557,2007,MITSUBISHI,ECLIPSE,,0,,,,,,,,,,,7/10/15,343820,2
@@ -195,12 +213,45 @@ Fullname,Firstname,MI,Lastname,Address1,Address2,City,State,Zip,Zip4,HPH,Email,D
 
 ### Specific Use Cases:
 
-For my specific use case, I typically require parsing of Zip codes (e.g 92882-4578) to Zip & ZIp4 components.  By default, if ZIP fields matches the regex patern, Zip & ZIp4 components will be parsed accordingly.
+For my specific use case, I typically require parsing of Zip codes (e.g 92882-4578) to Zip & ZIp4 components.  By default, if ZIP fields matches the zip regex patern, Zip & ZIp4 components will be parsed to their corresponding fields.
 
-Another specialized us case is Fullname parsing.  If a fullname field is provided amd there is a missing First or Last Name field, Fullname will be parsed to First. Middle amd Last Name fields respectively.
+```
+  {
+   "Zip": "76410-3620",
+   "Zip_4": "",
+  }
+
+  will be parsed to...
+
+  {
+   "Zip": "76410",
+   "Zip_4": "3620",
+  }
+
+```
+
+Another specialized us case is Fullname parsing.  If a fullname field is provided amd there is a missing First or Last Name field, Fullname will be parsed to First. Middle and Last Name fields respectively.
 
 Fullname parsing is handled by [github.com/blendlabs/go-name-parser](https://github.com/blendlabs/go-name-parser) package.
 
+```
+  {
+   "Full_name": "Sherlock H. Holmes",
+   "First_name": "Ed",
+   "Middle_name": "",
+   "Last_name": "",
+  }
+
+  will be parsed to...
+
+  {
+   "Full_name": "Sherlock H. Holmes",
+   "First_name": "Sherlock",
+   "Middle_name": "H.",
+   "Last_name": "Holmes",
+  }
+
+```
 
 ### Caveats & Limitations:
 
