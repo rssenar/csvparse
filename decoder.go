@@ -124,18 +124,29 @@ func (d *CSVDecoder) DecodeCSV(v interface{}) error {
 			if j == innerValueRow.Elem().NumField()-1 {
 				FullN := innerValueRow.Elem().FieldByName("Fullname")
 				FN := innerValueRow.Elem().FieldByName("Firstname")
+				MI := innerValueRow.Elem().FieldByName("MI")
 				LN := innerValueRow.Elem().FieldByName("Lastname")
 				if FullN.String() != "" && (FN.String() == "" || LN.String() == "") {
 					name := names.Parse(FullN.String())
-					innerValueRow.Elem().FieldByName("Firstname").SetString(name.FirstName)
-					innerValueRow.Elem().FieldByName("MI").SetString(name.MiddleName)
-					innerValueRow.Elem().FieldByName("Lastname").SetString(name.LastName)
+					if FN.IsValid() {
+						innerValueRow.Elem().FieldByName("Firstname").SetString(name.FirstName)
+					}
+					if MI.IsValid() {
+						innerValueRow.Elem().FieldByName("MI").SetString(name.MiddleName)
+					}
+					if LN.IsValid() {
+						innerValueRow.Elem().FieldByName("Lastname").SetString(name.LastName)
+					}
 				}
 				if fmt.Sprint(innerValueRow.Elem().FieldByName("Zip")) != "" {
-					zip, zip4 := ParseZip(fmt.Sprint(innerValueRow.Elem().FieldByName("Zip")))
-					innerValueRow.Elem().FieldByName("Zip").SetString(zip)
-					if innerValueRow.Elem().FieldByName("Zp4").String() != "" {
-						innerValueRow.Elem().FieldByName("Zip4").SetString(zip4)
+					pzip, pzip4 := ParseZip(fmt.Sprint(innerValueRow.Elem().FieldByName("Zip")))
+					if innerValueRow.Elem().FieldByName("Zip").IsValid() {
+						innerValueRow.Elem().FieldByName("Zip").SetString(pzip)
+					}
+					if innerValueRow.Elem().FieldByName("Zip4").IsValid() {
+						if innerValueRow.Elem().FieldByName("Zp4").String() != "" {
+							innerValueRow.Elem().FieldByName("Zip4").SetString(pzip4)
+						}
 					}
 				}
 			}
