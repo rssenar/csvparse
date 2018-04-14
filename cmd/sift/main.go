@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"time"
 
-	cp "github.com/rssenar/csvparse"
+	"github.com/rssenar/sift"
 )
 
 // D is the stuct the CSV file will be unmarshalled to
@@ -26,7 +26,7 @@ type D struct {
 	Zip        string    `json:"Zip" csv:"(?i)^(zip|postal)[ _]?(code)?$" fmt:"-"`
 	Zip4       string    `json:"Zip_4" csv:"(?i)^zip4$|^4zip$" fmt:"-"`
 	CRRT       string    `json:"CRRT" csv:"(?i)^crrt$" fmt:"uc"`
-	DSFwalkseq string    `json:"DSF_Walk_Sequence" csv:"(?i)^DSF_WALK_SEQ$" fmt:"uc"`
+	DSFwalkseq string    `json:"DSF_Walk_Sequence" csv:"(?i)^DSF_WALK_SEQ$" fmt:"-"`
 	HPH        string    `json:"Home_phone" csv:"(?i)^hph$|^home[ _]phone$" fmt:"fp"`
 	BPH        string    `json:"Business_phone" csv:"(?i)^bph$|^(work|business)[ _]phone$" fmt:"fp"`
 	CPH        string    `json:"Mobile_phone" csv:"(?i)^cph$|^mobile[ _]phone$" fmt:"fp"`
@@ -59,7 +59,7 @@ func main() {
 func parseStdinInput(input io.Reader) {
 	start := time.Now()
 	data := []*D{}
-	err := cp.NewDecoder(input).DecodeCSV(&data)
+	err := sift.NewDecoder(input).DecodeCSV(&data)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -115,7 +115,7 @@ func parseArgsInput(args []string) {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		err = cp.NewDecoder(inputfile).DecodeCSV(&data)
+		err = sift.NewDecoder(inputfile).DecodeCSV(&data)
 		if err != nil {
 			log.Fatalln(err)
 		}

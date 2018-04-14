@@ -1,4 +1,4 @@
-package csvparse
+package sift
 
 import (
 	"encoding/csv"
