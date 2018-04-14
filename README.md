@@ -1,12 +1,12 @@
 # sift
 
- [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/rssenar/csvparse/blob/master/LICENSE)
+ [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/rssenar/sift/blob/master/LICENSE)
 
 A simple package for parsing csv files into structs. The API and techniques inspired from  [github.com/gocarina/gocsv](https://github.com/gocarina/gocsv) but modified to fit my specific use cases.
 
 ### Installation
 
-```go get -u github.com/rssenar/csvparse```
+```go get -u github.com/rssenar/sift```
 
 ### Sample:
 
@@ -133,10 +133,10 @@ For struct field that are type time.Time will be formated according to RFC3339 t
 
 Included is a command line tool if you prefer to use this as a CLI.
 
-from csvparse directory, the run the go install command.
+from sift directory, the run the go install command.
 
 ```
->> go install ./cmd/csvparse/
+>> go install ./cmd/sift/
 ```
 
 you can pass a single file or mutliple files as a argument. Output files will be labeled with the current file name plus _parsed.csv.
@@ -145,7 +145,7 @@ you can pass a single file or mutliple files as a argument. Output files will be
 >> ls
 testfile.csv
 
->> csvparse testfile.csv
+>> sift testfile.csv
 2018/04/09 16:27:01 testfile.csv was parser in 801.853858ms
 
 >> ls
@@ -163,7 +163,7 @@ testfile1.csv	testfile2.csv	testfile3.csv
    50000 testfile3.csv
    90000 total
 
->> csvparse $(ls)
+>> sift $(ls)
 2018/04/09 16:29:00 testfile1.csv was parser in 792.097509ms
 2018/04/09 16:29:02 testfile2.csv was parser in 2.313945665s
 2018/04/09 16:29:06 testfile3.csv was parser in 3.939320765s
@@ -177,9 +177,9 @@ testfile1.csv		testfile1_parsed.csv	testfile2.csv		testfile2_parsed.csv	testfile
 You can also pipe in input from stdin to be printed to stdout or redirected to another file
 
 ```
->> cat testfile.csv | csvparse
+>> cat testfile.csv | sift
 
->> cat testfile.csv | csvparse > out.csv
+>> cat testfile.csv | sift > out.csv
 ```
 
 The output file will be the parsed and reformated as a csv representation of the struct provided. Struct field names will be use as the CSV field headers.
@@ -206,7 +206,7 @@ FIRSTNAME,LASTNAME,ADDRESS_1,CITY,STATE,ZIP,CRRT,DP2,DPC,LOT,LOT_ORD,HPH,CPH,EMA
 Sherlock,Holmes,1000 BAKER DR,FORT WORTH,TX,76410-3620,C003,0,0,,,,692-250-8078,,,4A3ZM24F67E005557,2007,MITSUBISHI,ECLIPSE,,0,,,,,,,,,,,7/10/15,343820,2
 John,Watson,10000 RIDGE DR,FORT WORTH,CA,76240-7530,R040,0,0,,,8205692022,,,,1C3GW46X04N288746,2004,CHRYSLER,SEBRING,,0,,12/31/03,,,,,,,,,10/14/10,343821,2
 
->> csvparse test.csv
+>> sift test.csv
 Fullname,Firstname,MI,Lastname,Address1,Address2,City,State,Zip,Zip4,HPH,Email,Date
 ,Sherlock,,Holmes,1000 Baker Dr,,Fort Worth,TX,76410,3620,,,2015-07-10
 ,John,,Watson,10000 Ridge Dr,,Fort Worth,CA,76240,7530,(820) 569-2022,,2010-10-14
